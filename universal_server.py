@@ -67,9 +67,12 @@ class BrowserWorker(threading.Thread):
             kind, payload = job
             try:
                 if kind == "chat":
-                    r = self.connector.chat(payload["messages"],
-                                            payload.get("timeout", 120),
-                                            stream_cb=payload.get("stream_cb"))
+                    kwargs = dict(messages=payload["messages"],
+                                  timeout_s=payload.get("timeout", 120),
+                                  stream_cb=payload.get("stream_cb"))
+                    if "model" in payload:
+                        kwargs["model"] = payload["model"]
+                    r = self.connector.chat(**kwargs)
                     result = ("ok", r)
                 elif kind == "check":
                     result = ("ok", self.connector.is_logged_in())
@@ -132,6 +135,10 @@ async def models():
         data.append({"id": name, "object": "model",
                      "owned_by": "universal-bridge",
                      "ready": name in WORKERS and has_flow})
+    # real qwen model ids bhi expose karo
+    for mid in ("qwen3.7-plus", "qwen3.8-max"):
+        data.append({"id": mid, "object": "model",
+                     "owned_by": "qwen", "ready": True})
     return {"object": "list", "data": data}
 
 
@@ -146,11 +153,15 @@ async def chat_completions(request: Request):
     messages = body.get("messages", [])
     is_stream = body.get("stream", False)
 
-    worker = get_worker(model)
+    # real model ids + aliases -> connector name resolve
+    connector_name = "qwen" if model.startswith("qwen") else model
+    requested_model = model   # response me yahi jayega
+
+    worker = get_worker(connector_name)
     if worker is None:
         return JSONResponse({"error": {"message":
-            f"model '{model}' nahi hai. Available: "
-            f"{list(CONNECTOR_CLASSES.keys())}", "type": "bad_model"}},
+            f"model '{model}' nahi hai. Available: qwen, notion, figma, "
+            f"qwen3.7-plus, qwen3.8-max", "type": "bad_model"}},
             status_code=400)
 
     def make_resp(content):
@@ -177,7 +188,8 @@ async def chat_completions(request: Request):
         return f"data: {json.dumps(c)}\n\n"
 
     if not is_stream:
-        status, reply = worker.submit("chat", messages=messages)
+        status, reply = worker.submit("chat", messages=messages,
+                                      model=requested_model)
         if status != "ok":
             return JSONResponse({"error": {"message": reply,
                                            "type": "connector_error"}},
@@ -194,7 +206,8 @@ async def chat_completions(request: Request):
     def run():
         try:
             status, reply = worker.submit("chat", messages=messages,
-                                          stream_cb=cb)
+                                          stream_cb=cb,
+                                          model=requested_model)
             if status != "ok":
                 q.put(Exception(reply))
         except Exception as e:

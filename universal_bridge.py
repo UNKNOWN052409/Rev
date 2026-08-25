@@ -97,9 +97,9 @@ class BaseConnector:
             return False
 
     # ---- MITM core ----
-    def chat(self, messages, timeout_s=120, stream_cb=None):
+    def chat(self, messages, timeout_s=120, stream_cb=None, model=None):
         """Default: captured flow replay (notion/figma ke liye).
-        Qwen apna override karta hai."""
+        Qwen apna override karta hai. model param ignore hota hai."""
         with self.lock:
             self._chunks = []
             self._stream_cb = stream_cb
@@ -222,6 +222,15 @@ class QwenConnector(BaseConnector):
     login_url = "https://chat.qwen.ai"
     profile_dir = os.path.join(CONNECTORS_DIR, "profile_qwen")
 
+    # alias -> real model id (chat.qwen.ai/api/models se)
+    MODEL_ALIASES = {
+        "qwen": "qwen3.7-plus",
+        "qwen-plus": "qwen3.7-plus",
+        "qwen-max": "qwen3.8-max",
+        "qwen3.7-plus": "qwen3.7-plus",
+        "qwen3.8-max": "qwen3.8-max",
+    }
+
     def __init__(self):
         super().__init__()
         self._umid = ""
@@ -231,13 +240,14 @@ class QwenConnector(BaseConnector):
         except Exception:
             pass
 
-    def chat(self, messages, timeout_s=120, stream_cb=None):
+    def chat(self, messages, timeout_s=120, stream_cb=None, model="qwen"):
+        real = self.MODEL_ALIASES.get(model, "qwen3.7-plus")
         with self.lock:
             self._chunks = []
             self._stream_cb = stream_cb
-            return self._qwen_chat(render_prompt(messages), timeout_s)
+            return self._qwen_chat(render_prompt(messages), timeout_s, real)
 
-    def _qwen_chat(self, prompt, timeout_s):
+    def _qwen_chat(self, prompt, timeout_s, model_id="qwen3.7-plus"):
         page = self.page
         page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
         page.wait_for_timeout(3000)
@@ -248,7 +258,7 @@ class QwenConnector(BaseConnector):
 
         result = page.evaluate(
             """async (args) => {
-                const [prompt, timeoutMs, umid] = args;
+                const [prompt, timeoutMs, umid, modelId] = args;
                 const withTimeout = (p, ms) =>
                     Promise.race([p, new Promise((_, rej) =>
                         setTimeout(() => rej(new Error("timeout " + ms)), ms))]);
@@ -267,7 +277,7 @@ class QwenConnector(BaseConnector):
                 const r1 = await withTimeout(fetch("/api/v2/chats/new", {
                     method: "POST", headers: H(), credentials: "include",
                     body: JSON.stringify({chatId: "",
-                        models: ["qwen3.7-plus"], project_id: "",
+                        models: [modelId], project_id: "",
                         timestamp: tsMs, chat_type: "t2t",
                         chat_mode: "normal"}),
                 }), 20000);
@@ -282,12 +292,12 @@ class QwenConnector(BaseConnector):
                     stream: true, version: "2.1",
                     incremental_output: true,
                     chatId: cid, parentId: "", chat_id: cid,
-                    chat_mode: "normal", model: "qwen3.7-plus",
+                    chat_mode: "normal", model: modelId,
                     parent_id: null,
                     messages: [{id: null, fid: crypto.randomUUID(),
                         parentId: null, childrenIds: [], role: "user",
                         content: prompt, user_action: "chat", files: [],
-                        timestamp: ts, models: ["qwen3.7-plus"],
+                        timestamp: ts, models: [modelId],
                         model: "", chat_type: "t2t",
                         feature_config: {thinking_enabled: false,
                             output_schema: "phase",
@@ -337,7 +347,7 @@ class QwenConnector(BaseConnector):
                     return {error: String(e).slice(0, 250)};
                 }
             }""",
-            [prompt, timeout_s * 1000, self._umid])
+            [prompt, timeout_s * 1000, self._umid, model_id])
 
         if result and result.get("error"):
             raise RuntimeError(result["error"][:300])
