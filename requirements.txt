@@ -1,0 +1,15 @@
+mitmproxy>=10.0.0
+requests>=2.31.0
+frida-tools>=12.0.0
+
+# Workflow 5 — App -> OpenAI adapter server:
+fastapi>=0.110.0
+uvicorn>=0.29.0
+
+# qwen_auto.py — headless browser login automation:
+playwright>=1.44.0
+
+# Optional — forensics accuracy ke liye (tokenizer fingerprinting):
+# tiktoken          # GPT-family ground truth
+# transformers      # HF tokenizers (Qwen/Llama family)
+# torch             # transformers dependency

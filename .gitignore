@@ -1,0 +1,24 @@
+# captured traffic + tokens + sessions — NEVER push
+re_capture/
+shots/
+__pycache__/
+*.log
+nohup.out
+*.pyc
+
+# LIVE AUTH MATERIAL — kabhi push mat karna
+config.json
+browser_profile/
+connectors/profile_*/
+connectors/*_flow.json
+captured_v2_flow.json
+fresh_cookies.txt
+*.token
+.env
+
+# venv
+venv/
+.venv/
+
+# forensics output
+forensics_report.json
