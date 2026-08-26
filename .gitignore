@@ -22,3 +22,10 @@ venv/
 
 # forensics output
 forensics_report.json
+notion_token_v2.txt
+connectors/notion_cookies.json
+connectors/notion_phase_a.json
+connectors/notion_localstorage.json
+connectors/profile_notion/
+lmarena_*.png
+notion_*.png

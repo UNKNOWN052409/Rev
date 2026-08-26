@@ -26,6 +26,7 @@ import queue
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -399,33 +400,263 @@ def parse_sse_full(raw, chunk_parser):
 
 
 # ================================================================
-# NOTION / FIGMA connectors — capture-based replay
+# NOTION connector — PURE HTTP (runInferenceTranscript, NDJSON)
 # ================================================================
 
+NOTION_MODELS = {
+    "sonnet-4.6": "almond-croissant-low",
+    "sonnet-5": "angel-cake-high",
+    "opus-4.6": "avocado-froyo-medium",
+    "opus-4.7": "apricot-sorbet-high",
+    "opus-4.8": "ambrosia-tart-high",
+    "opus-5": "agave-flan",
+    "gpt-5.2": "oatmeal-cookie",
+    "gpt-5.4": "oval-kumquat-medium",
+    "gpt-5.5": "opal-quince-medium",
+    "gpt-5.6-luna": "olive-jellyroll",
+    "gpt-5.6-terra": "orchid-muffin",
+    "gpt-5.6-sol": "orange-mousse",
+    "gpt-5.4-mini": "oregon-grape-medium",
+    "gpt-5.4-nano": "otaheite-apple-medium",
+    "grok-4.6": "soursop-shortcake",
+    "grok-4.3": "xigua-mochi-medium",
+    "gemini-3.5-flash": "vertex-gemini-3.5-flash",
+    "gemini-3.6-flash": "vertex-gemini-3.6-flash",
+    "gemini-3.7-flash": "grapefruit-zeppole",
+    "kimi-k2.6": "fireworks-kimi-k2.6",
+    "kimi-k2.7-code": "fireworks-kimi-k2.7",
+    "kimi-k3": "fireworks-kimi-k3",
+    "deepseek-v4-pro": "baseten-deepseek-v4-pro",
+    "deepseek-v4-flash": "baseten-deepseek-v4-flash",
+    "glm-5.2": "baseten-glm-5.2",
+}
+
+
 class NotionConnector(BaseConnector):
+    """Notion AI — pure HTTP, no browser needed.
+    Auth: token_v2 cookie (login_otp flow se milta hai).
+    Flow intel: connectors/notion_ai_flow.json"""
     name = "notion"
     login_url = "https://www.notion.so/login"
     profile_dir = os.path.join(CONNECTORS_DIR, "profile_notion")
+    api = "https://www.notion.so/api/v3"
+    default_model = "almond-croissant-low"  # Sonnet 4.6
+
+    MODEL_ALIASES = {
+        "notion": default_model,
+        "notion-ai": default_model,
+        "notion-sonnet": default_model,
+        "notion-sonnet-4-6": default_model,
+        "notion-sonnet-5": "angel-cake-high",
+        "notion-opus": "avocado-froyo-medium",
+        "notion-opus-4-6": "avocado-froyo-medium",
+        "notion-opus-4-7": "apricot-sorbet-high",
+        "notion-opus-4-8": "ambrosia-tart-high",
+        "notion-opus-5": "agave-flan",
+        "notion-claude-opus-5": "agave-flan",
+        "notion-gpt": "oatmeal-cookie",
+        "notion-gpt-5-2": "oatmeal-cookie",
+        "notion-gpt-5-6-terra": "orchid-muffin",
+        "notion-grok": "soursop-shortcake",
+        "notion-gemini": "vertex-gemini-3.5-flash",
+        "notion-kimi": "fireworks-kimi-k2.6",
+        "notion-deepseek": "baseten-deepseek-v4-pro",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.auth = None
+
+    # playwright skip — pure HTTP hai
+    def start(self):
+        self._load_auth()
+
+    def _load_auth(self):
+        if self.auth:
+            return
+        auth = {}
+        tv2_path = os.path.join(os.path.dirname(CONNECTORS_DIR),
+                                "notion_token_v2.txt")
+        if os.path.exists(tv2_path):
+            with open(tv2_path) as f:
+                auth["token_v2"] = f.read().strip()
+        flow_p = os.path.join(CONNECTORS_DIR, "notion_ai_flow.json")
+        if os.path.exists(flow_p):
+            with open(flow_p) as f:
+                fl = json.load(f)
+            b = fl.get("body", {})
+            auth["space_id"] = b.get("spaceId", "")
+            tr = b.get("transcript", [])
+            for blk in tr:
+                if blk.get("type") == "context":
+                    v = blk.get("value", {})
+                    auth.update({k: v.get(k) for k in
+                                 ("userId", "userEmail", "userName",
+                                  "spaceName", "spaceViewId", "timezone")})
+        if auth.get("token_v2") and auth.get("space_id"):
+            self.auth = auth
+        else:
+            raise RuntimeError(
+                "notion: auth nahi mila — notion_token_v2.txt + "
+                "connectors/notion_ai_flow.json chahiye")
+
+    def is_logged_in(self):
+        try:
+            self._load_auth()
+            return True
+        except Exception:
+            return False
+
+    def resolve_model(self, model):
+        m = (model or "").strip()
+        if m in self.MODEL_ALIASES:
+            return self.MODEL_ALIASES[m]
+        short = m.replace("notion-", "").replace("notion_", "")
+        if short in NOTION_MODELS:
+            return NOTION_MODELS[short]
+        if short in NOTION_MODELS.values():
+            return short
+        return self.default_model
+
+    REPLACE_MARK = "\x00RPL\x00"
 
     @staticmethod
     def parse_chunk(raw):
+        """Ek NDJSON line -> text piece (ya None).
+        Do patterns handle karta hai:
+        - append: {"o":"a", v:{type:text, content}} -> delta
+        - replace: {"o":"p", p:.../content, v:"full text"} -> REPLACE_MARK+full
+        - agent-inference blocks ke andar ke text bhi pakdo
+        """
         try:
             d = json.loads(raw)
         except Exception:
             return None
-        # Notion AI SSE shapes (capture ke baad adjust hoga)
-        if isinstance(d, dict):
-            for key in ("content", "text", "delta", "answer"):
-                v = d.get(key)
-                if isinstance(v, str):
-                    return v
-            ch = (d.get("choices") or [{}])[0]
-            delta = ch.get("delta", {}) or {}
-            if delta.get("content"):
-                return delta["content"]
-        return None
+        if not isinstance(d, dict) or d.get("type") != "patch":
+            return None
+        out = []
+        for op in d.get("v", []):
+            o = op.get("o")
+            p = op.get("p", "")
+            v = op.get("v")
+            if o == "p" and isinstance(p, str) and p.endswith("/content") \
+                    and isinstance(v, str):
+                out.append(NotionConnector.REPLACE_MARK + v)
+            elif isinstance(v, dict):
+                if v.get("type") == "text" and isinstance(v.get("content"), str) \
+                        and v["content"]:
+                    out.append(v["content"])
+                elif v.get("type") == "agent-inference":
+                    for item in v.get("value", []) or []:
+                        if isinstance(item, dict) and item.get("type") == "text" \
+                                and isinstance(item.get("content"), str) \
+                                and item["content"]:
+                            out.append(item["content"])
+        return "".join(out) if out else None
 
-    parse_response = lambda self, raw: parse_sse_full(raw, NotionConnector.parse_chunk)
+    def chat(self, messages, timeout_s=120, stream_cb=None, model="notion"):
+        from curl_cffi import requests as cr
+        with self.lock:
+            self._load_auth()
+            a = self.auth
+            prompt = render_prompt(messages)
+            mid = self.resolve_model(model)
+            ist = timezone(timedelta(hours=5, minutes=30))
+            now = datetime.now(ist).isoformat(timespec="milliseconds")
+            uid = a.get("userId", "")
+            sid = a["space_id"]
+            transcript = [
+                {"id": str(uuid.uuid4()), "type": "config",
+                 "value": {"type": "workflow", "modelFromUser": True,
+                           "model": mid,
+                           "useWebSearch": True, "internetAccess": False,
+                           "isHipaa": False, "useReadOnlyMode": False,
+                           "writerMode": False, "isCustomAgent": False,
+                           "isMobile": False, "availableConnectors": [],
+                           "customConnectorInfo": [],
+                           "searchScopes": [{"type": "everything"}]}},
+                {"id": str(uuid.uuid4()), "type": "context",
+                 "value": {"timezone": a.get("timezone", "Asia/Kolkata"),
+                           "userName": a.get("userName", "user"),
+                           "userId": uid,
+                           "userEmail": a.get("userEmail", ""),
+                           "spaceName": a.get("spaceName", ""),
+                           "spaceId": sid,
+                           "spaceViewId": a.get("spaceViewId", ""),
+                           "currentDatetime": now,
+                           "surface": "ai_module"}},
+                {"id": str(uuid.uuid4()), "type": "user",
+                 "value": [[prompt]], "userId": uid, "createdAt": now},
+            ]
+            body = {
+                "traceId": str(uuid.uuid4()), "spaceId": sid,
+                "transcript": transcript,
+                "threadId": str(uuid.uuid4()),
+                "createThread": True, "isPartialTranscript": False,
+                "generateTitle": False, "saveAllThreadOperations": False,
+                "setUnreadState": False, "threadType": "workflow",
+                "asPatchResponse": True, "patchResponseVersion": 2,
+                "hasHeartbeat": False, "createdSource": "ai_module",
+                "isUserInAnySalesAssistedSpace": False,
+                "isSpaceSalesAssisted": False,
+                "threadParentPointer": {"table": "space", "id": sid,
+                                        "spaceId": sid},
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/x-ndjson",
+                "Origin": "https://www.notion.so",
+                "Referer": "https://www.notion.so/ai",
+                "User-Agent": UA,
+                "Cookie": ("token_v2=" + a["token_v2"] +
+                           "; notion_user_id=" + uid),
+                "x-notion-active-user-header": uid,
+                "x-notion-space-id": sid,
+                "notion-audit-log-platform": "web",
+                "notion-client-version": "23.13.20260825.1237",
+            }
+            r = cr.post(self.api + "/runInferenceTranscript", json=body,
+                        headers=headers, impersonate="chrome131",
+                        timeout=(15, timeout_s), stream=True)
+            if r.status_code in (401, 403):
+                raise RuntimeError(
+                    "notion: auth fail (" + str(r.status_code) +
+                    ") — token_v2 expire, naya OTP login chahiye")
+            if r.status_code != 200:
+                raise RuntimeError("notion: HTTP " + str(r.status_code) +
+                                   " " + r.text[:200])
+            pieces = []
+            final = []
+            for line in r.iter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                if not line:
+                    continue
+                piece = self.parse_chunk(line)
+                if not piece:
+                    continue
+                pieces.append(piece)
+                if self.REPLACE_MARK in piece:
+                    # replace semantics: buffer reset + full text
+                    full = piece.split(self.REPLACE_MARK, 1)[1]
+                    final = [full]
+                    if stream_cb:
+                        try:
+                            stream_cb("\n" + full)
+                        except Exception:
+                            pass
+                else:
+                    final.append(piece)
+                    if stream_cb:
+                        try:
+                            stream_cb(piece)
+                        except Exception:
+                            pass
+            text = "".join(final).strip()
+            if not text:
+                raise RuntimeError(
+                    "notion: empty stream — credits khatam ya format badla")
+            return text
 
 
 class FigmaConnector(BaseConnector):

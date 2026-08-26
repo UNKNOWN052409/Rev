@@ -1,0 +1,1094 @@
+{
+ "3c7d872b-594c-81aa-a090-0002b06adcfb": {
+  "__version__": 3,
+  "notion_user": {
+   "3c7d872b-594c-81aa-a090-0002b06adcfb": {
+    "value": {
+     "value": {
+      "id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "version": 5,
+      "email": "atharv@havenhaus.in",
+      "onboarding_completed": true,
+      "mobile_onboarding_completed": true,
+      "name": "Atharv"
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "user_root": {
+   "3c7d872b-594c-81aa-a090-0002b06adcfb": {
+    "value": {
+     "value": {
+      "id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "version": 5,
+      "space_views": [
+       "3c7b20f6-c948-81b5-801a-000653f55846",
+       "3c71363c-b1f3-8132-a42c-00069e6e2b80"
+      ],
+      "space_view_pointers": [
+       {
+        "id": "3c7b20f6-c948-81b5-801a-000653f55846",
+        "table": "space_view",
+        "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672"
+       },
+       {
+        "id": "3c71363c-b1f3-8132-a42c-00069e6e2b80",
+        "table": "space_view",
+        "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a"
+       }
+      ]
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "user_settings": {
+   "3c7d872b-594c-81aa-a090-0002b06adcfb": {
+    "value": {
+     "value": {
+      "id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "version": 14,
+      "settings": {
+       "time_zone": "Asia/Calcutta",
+       "domain_type": "professional",
+       "signup_time": 1787665834547,
+       "persona_version": {
+        "version": "V4",
+        "timestamp": 1787665892412
+       },
+       "preferred_locale": "en-US",
+       "used_mobile_web_app": true,
+       "used_desktop_web_app": true,
+       "preferred_locale_origin": "autodetect",
+       "callout_dismissal_timestamps": [
+        {
+         "name": "startup_trial_celebration_modal",
+         "timestamp": 1787665907188
+        }
+       ]
+      }
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "space_view": {
+   "3c7b20f6-c948-81b5-801a-000653f55846": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "3c7b20f6-c948-81b5-801a-000653f55846",
+      "version": 14,
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "parent_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "parent_table": "user_root",
+      "alive": true,
+      "notify_mobile": true,
+      "notify_desktop": true,
+      "notify_email": true,
+      "created_getting_started": true,
+      "private_pages": [
+       "3c7b20f6-c948-803a-b863-e2ed1aef3504",
+       "3c7b20f6-c948-80e0-aa79-f45adbad80fe"
+      ],
+      "notify_email_always": true,
+      "joined": true,
+      "settings": {
+       "library": {
+        "version": 11
+       },
+       "notion_apps": {
+        "order": [
+         "mail",
+         "calendar",
+         "desktop"
+        ],
+        "hidden": true
+       },
+       "personal_home": {
+        "version": 42,
+        "hide_new_badge": true,
+        "enabled_features": {
+         "tips": true,
+         "calendar": true,
+         "greeting": true,
+         "templates": true
+        },
+        "seen_welcome_animation": false,
+        "home_landing_page_enabled_v2": false
+       },
+       "notify_email_digest": true,
+       "getting_started_page_ids": [
+        "3c7b20f6-c948-803a-b863-e2ed1aef3504",
+        "3c7b20f6-c948-80e0-aa79-f45adbad80fe"
+       ],
+       "notify_home_digest_email": true,
+       "slippery_slope_is_enabled": false,
+       "slippery_slope_experiment_group": "default_off"
+      },
+      "shared_pages_manual_sort": [
+       "3c7b20f6-c948-803a-b863-e2ed1aef3504",
+       "3c7b20f6-c948-80e0-aa79-f45adbad80fe",
+       "0282a2dc-1985-4647-9d03-fd6739879835"
+      ],
+      "first_joined_space_time": 1787665847460
+     },
+     "role": "editor"
+    }
+   },
+   "3c71363c-b1f3-8132-a42c-00069e6e2b80": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "3c71363c-b1f3-8132-a42c-00069e6e2b80",
+      "version": 14,
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "parent_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "parent_table": "user_root",
+      "alive": true,
+      "notify_mobile": true,
+      "notify_desktop": true,
+      "notify_email": true,
+      "created_getting_started": true,
+      "private_pages": [
+       "3c71363c-b1f3-8055-9ca2-c5ead6d589dd",
+       "3c71363c-b1f3-80e6-8347-d370d1f60b0f"
+      ],
+      "notify_email_always": true,
+      "joined": true,
+      "settings": {
+       "library": {
+        "version": 11
+       },
+       "notion_apps": {
+        "order": [
+         "mail",
+         "calendar",
+         "desktop"
+        ],
+        "hidden": true
+       },
+       "personal_home": {
+        "version": 42,
+        "hide_new_badge": true,
+        "enabled_features": {
+         "tips": true,
+         "calendar": true,
+         "greeting": true,
+         "templates": true
+        },
+        "seen_welcome_animation": false,
+        "home_landing_page_enabled_v2": false
+       },
+       "notify_email_digest": true,
+       "getting_started_page_ids": [
+        "3c71363c-b1f3-8055-9ca2-c5ead6d589dd",
+        "3c71363c-b1f3-80e6-8347-d370d1f60b0f"
+       ],
+       "notify_home_digest_email": true,
+       "slippery_slope_is_enabled": false,
+       "slippery_slope_experiment_group": "default_off"
+      },
+      "shared_pages_manual_sort": [
+       "3c71363c-b1f3-8055-9ca2-c5ead6d589dd",
+       "3c71363c-b1f3-80e6-8347-d370d1f60b0f",
+       "e84927e1-4e97-4bf7-b9eb-015c6899ed99"
+      ],
+      "first_joined_space_time": 1787665892540
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "space_user": {
+   "3c7d872b-594c-81aa-a090-0002b06adcfb|b10b20f6-c948-8163-a5b1-00034412c672": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "membership_type": "owner",
+      "id": "3c7d872b-594c-81aa-a090-0002b06adcfb|b10b20f6-c948-8163-a5b1-00034412c672",
+      "version": 1
+     },
+     "role": "editor"
+    }
+   },
+   "3c7d872b-594c-81aa-a090-0002b06adcfb|5b01363c-b1f3-81a1-af65-000362ddc30a": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "membership_type": "owner",
+      "id": "3c7d872b-594c-81aa-a090-0002b06adcfb|5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "version": 1
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "space": {
+   "b10b20f6-c948-8163-a5b1-00034412c672": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "version": 3,
+      "name": "Atharv\u2019s Space",
+      "beta_enabled": false,
+      "created_time": 1787665846841,
+      "last_edited_time": 1787665846841,
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "plan_type": "team",
+      "invite_link_enabled": true,
+      "settings": {
+       "crdt_status": "on",
+       "is_teams_enabled": true,
+       "enable_ai_feature": true,
+       "space_survey_data": {
+        "intent": {
+         "value": "team",
+         "version": 1,
+         "collected_at": 1787665847405,
+         "collected_from": "onboarding"
+        }
+       },
+       "disable_ai_feature": false,
+       "enable_ai_training": false,
+       "show_home_virtual_views": false,
+       "permission_group_creation_policy": "all_workspace_members",
+       "sharded_entitlement_usage_tables": true
+      },
+      "subscription_tier": "free",
+      "short_id": 47797684552,
+      "short_id_str": "47797684552"
+     },
+     "role": "editor"
+    }
+   },
+   "5b01363c-b1f3-81a1-af65-000362ddc30a": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "version": 9,
+      "name": "Atharv\u2019s Space",
+      "beta_enabled": false,
+      "created_time": 1787665891962,
+      "last_edited_time": 1787665891962,
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "plan_type": "team",
+      "invite_link_enabled": true,
+      "settings": {
+       "crdt_status": "on",
+       "is_teams_enabled": true,
+       "enable_ai_feature": true,
+       "space_survey_data": {
+        "intent": {
+         "value": "team",
+         "version": 1,
+         "collected_at": 1787665892400,
+         "collected_from": "onboarding"
+        },
+        "collaborative_intent": {
+         "value": "multiplayer",
+         "version": 1,
+         "collected_at": 1787665892400,
+         "collected_from": "onboarding"
+        }
+       },
+       "disable_ai_feature": false,
+       "enable_ai_training": false,
+       "disable_transcription": false,
+       "show_home_virtual_views": false,
+       "permission_group_creation_policy": "all_workspace_members",
+       "sharded_entitlement_usage_tables": true,
+       "personal_access_token_creation_policy": "workspace_owners_only"
+      },
+      "subscription_tier": "business",
+      "short_id": 5204914675,
+      "short_id_str": "5204914675"
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "sidebar_section": {
+   "0cab20f6-c948-83b5-b9bf-12fa720e7ff2": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "0cab20f6-c948-83b5-b9bf-12fa720e7ff2",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "agents"
+     },
+     "role": "editor"
+    }
+   },
+   "0e7b20f6-c948-82ab-a280-12dbe42aef51": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "0e7b20f6-c948-82ab-a280-12dbe42aef51",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "chats"
+     },
+     "role": "editor"
+    }
+   },
+   "68ab20f6-c948-82cd-a95d-929e349a6c1e": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "68ab20f6-c948-82cd-a95d-929e349a6c1e",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "private"
+     },
+     "role": "editor"
+    }
+   },
+   "72db20f6-c948-826b-888e-12b145f04e2b": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "72db20f6-c948-826b-888e-12b145f04e2b",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "myMeetings"
+     },
+     "role": "editor"
+    }
+   },
+   "7cfb20f6-c948-82d6-8006-92191e34fdc1": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "7cfb20f6-c948-82d6-8006-92191e34fdc1",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "favorites"
+     },
+     "role": "editor"
+    }
+   },
+   "8e0b20f6-c948-8290-b61b-127d525a0619": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "8e0b20f6-c948-8290-b61b-127d525a0619",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "teamspaces"
+     },
+     "role": "editor"
+    }
+   },
+   "caab20f6-c948-8209-a7e0-92799685585f": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "caab20f6-c948-8209-a7e0-92799685585f",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "meetings_today"
+     },
+     "role": "editor"
+    }
+   },
+   "d21b20f6-c948-8378-a05c-12c8637dc68c": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "d21b20f6-c948-8378-a05c-12c8637dc68c",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "recents"
+     },
+     "role": "editor"
+    }
+   },
+   "edab20f6-c948-83a3-9f42-124568d843e2": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "edab20f6-c948-83a3-9f42-124568d843e2",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "alive": true,
+      "created_at": 1787665864494,
+      "section_type": "shared"
+     },
+     "role": "editor"
+    }
+   },
+   "0ca1363c-b1f3-83b5-b9bf-12fa720e7ff2": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "0ca1363c-b1f3-83b5-b9bf-12fa720e7ff2",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "agents"
+     },
+     "role": "editor"
+    }
+   },
+   "0e71363c-b1f3-82ab-a280-12dbe42aef51": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "0e71363c-b1f3-82ab-a280-12dbe42aef51",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "chats"
+     },
+     "role": "editor"
+    }
+   },
+   "68a1363c-b1f3-82cd-a95d-929e349a6c1e": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "68a1363c-b1f3-82cd-a95d-929e349a6c1e",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "private"
+     },
+     "role": "editor"
+    }
+   },
+   "72d1363c-b1f3-826b-888e-12b145f04e2b": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "72d1363c-b1f3-826b-888e-12b145f04e2b",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "myMeetings"
+     },
+     "role": "editor"
+    }
+   },
+   "7cf1363c-b1f3-82d6-8006-92191e34fdc1": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "7cf1363c-b1f3-82d6-8006-92191e34fdc1",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "favorites"
+     },
+     "role": "editor"
+    }
+   },
+   "8e01363c-b1f3-8290-b61b-127d525a0619": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "8e01363c-b1f3-8290-b61b-127d525a0619",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "teamspaces"
+     },
+     "role": "editor"
+    }
+   },
+   "caa1363c-b1f3-8209-a7e0-92799685585f": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "caa1363c-b1f3-8209-a7e0-92799685585f",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "meetings_today"
+     },
+     "role": "editor"
+    }
+   },
+   "d211363c-b1f3-8378-a05c-12c8637dc68c": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "d211363c-b1f3-8378-a05c-12c8637dc68c",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "recents"
+     },
+     "role": "editor"
+    }
+   },
+   "eda1363c-b1f3-83a3-9f42-124568d843e2": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "eda1363c-b1f3-83a3-9f42-124568d843e2",
+      "version": 1,
+      "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "alive": true,
+      "created_at": 1787665905572,
+      "section_type": "shared"
+     },
+     "role": "editor"
+    }
+   }
+  },
+  "block": {
+   "3c7b20f6-c948-803a-b863-e2ed1aef3504": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "3c7b20f6-c948-803a-b863-e2ed1aef3504",
+      "version": 8,
+      "type": "page",
+      "properties": {
+       "title": [
+        [
+         "Welcome to Notion!"
+        ]
+       ]
+      },
+      "content": [
+       "3c7b20f6-c948-80a4-9f19-f4f57ffbd475",
+       "3c7b20f6-c948-8088-92b9-f471cc414dde",
+       "3c7b20f6-c948-8035-ab69-d0ba0e1ac816",
+       "3c7b20f6-c948-8091-9b6d-fdc9ea4f1417",
+       "3c7b20f6-c948-80a1-8e90-e0bb54189a91",
+       "3c7b20f6-c948-805e-a669-f4b8362878e8",
+       "3c7b20f6-c948-80ff-8dba-e8b074b84ae7",
+       "3c7b20f6-c948-8063-9358-c02d04a31f83",
+       "3c7b20f6-c948-80a3-b81a-e881b76840d5",
+       "3c7b20f6-c948-803e-be5a-dd97d4b26637",
+       "3c7b20f6-c948-8002-88bf-c193ec3d9583"
+      ],
+      "format": {
+       "page_icon": "\ud83d\udc4b",
+       "copied_from_pointer": {
+        "id": "2a717954-d9c2-80dc-a782-ed5c80d1a72f",
+        "table": "block",
+        "spaceId": "1f88cc90-92fd-4ce4-bfcd-25daec2ffbbe"
+       }
+      },
+      "permissions": [
+       {
+        "role": "editor",
+        "type": "user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665853745,
+      "last_edited_time": 1787665853812,
+      "parent_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "parent_table": "space",
+      "alive": true,
+      "copied_from": "2a717954-d9c2-80dc-a782-ed5c80d1a72f",
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "vSagZpfCHyCiJsK5TPLc8A,\"start\",\"end\"",
+        "n": {
+         "vSagZpfCHyCiJsK5TPLc8A,\"start\",\"end\"": {
+          "s": {
+           "x": "vSagZpfCHyCiJsK5TPLc8A",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "7aokdN045Quy",
+              1
+             ],
+             "o": "start",
+             "l": 18,
+             "c": "Welcome to Notion!"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "editor"
+    }
+   },
+   "3c7b20f6-c948-80e0-aa79-f45adbad80fe": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "3c7b20f6-c948-80e0-aa79-f45adbad80fe",
+      "version": 8,
+      "type": "page",
+      "properties": {
+       "title": [
+        [
+         "To Do List"
+        ]
+       ]
+      },
+      "content": [
+       "3c7b20f6-c948-8066-9b29-f98a6d094d7a",
+       "3c7b20f6-c948-80de-8d42-e3e13393db2a"
+      ],
+      "format": {
+       "page_icon": "/icons/checklist_green.svg",
+       "copied_from_pointer": {
+        "id": "26d17954-d9c2-8134-9fbd-d96c9eaf037e",
+        "table": "block",
+        "spaceId": "1f88cc90-92fd-4ce4-bfcd-25daec2ffbbe"
+       }
+      },
+      "permissions": [
+       {
+        "role": "editor",
+        "type": "user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665852930,
+      "last_edited_time": 1787665853194,
+      "parent_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "parent_table": "space",
+      "alive": true,
+      "copied_from": "26d17954-d9c2-8134-9fbd-d96c9eaf037e",
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "-J8JDUcOakWN3BB2joOMqA,\"start\",\"end\"",
+        "n": {
+         "-J8JDUcOakWN3BB2joOMqA,\"start\",\"end\"": {
+          "s": {
+           "x": "-J8JDUcOakWN3BB2joOMqA",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "oLPEYmP6cytF",
+              1
+             ],
+             "o": "start",
+             "l": 10,
+             "c": "To Do List"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "editor"
+    }
+   },
+   "0282a2dc-1985-4647-9d03-fd6739879835": {
+    "spaceId": "b10b20f6-c948-8163-a5b1-00034412c672",
+    "value": {
+     "value": {
+      "id": "0282a2dc-1985-4647-9d03-fd6739879835",
+      "version": 2,
+      "type": "personal_home_page",
+      "properties": {
+       "title": [
+        [
+         "Home"
+        ]
+       ]
+      },
+      "content": [
+       "6ed39258-5f30-4d86-b136-c858b91ceac5",
+       "d9323c66-3a1f-4893-adcf-c1adfbc13b4c",
+       "b113012f-ac8d-4e53-9d6c-46ec2049578e",
+       "ed4408e7-b095-4226-b276-f609ca03a107"
+      ],
+      "format": {
+       "system_block_type": "home_main"
+      },
+      "permissions": [
+       {
+        "role": "read_and_write",
+        "type": "exclusive_user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665848499,
+      "last_edited_time": 1787665848499,
+      "parent_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "parent_table": "space",
+      "alive": true,
+      "ignore_block_count": true,
+      "is_template": false,
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "b10b20f6-c948-8163-a5b1-00034412c672",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "Z4yRESozyvjf-zlCF-3JXQ,\"start\",\"end\"",
+        "n": {
+         "Z4yRESozyvjf-zlCF-3JXQ,\"start\",\"end\"": {
+          "s": {
+           "x": "Z4yRESozyvjf-zlCF-3JXQ",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "CWgWUbm1GoZ8",
+              1
+             ],
+             "o": "start",
+             "l": 4,
+             "c": "Home"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "read_and_write"
+    }
+   },
+   "3c71363c-b1f3-8055-9ca2-c5ead6d589dd": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "3c71363c-b1f3-8055-9ca2-c5ead6d589dd",
+      "version": 8,
+      "type": "page",
+      "properties": {
+       "title": [
+        [
+         "Getting Started"
+        ]
+       ]
+      },
+      "content": [
+       "3c71363c-b1f3-80cc-b12b-ed248436f9ba",
+       "3c71363c-b1f3-8026-818f-c8cf289a7f05",
+       "3c71363c-b1f3-8010-85c1-f2168d6e1ee6",
+       "3c71363c-b1f3-8033-8c6d-e1309363085f",
+       "3c71363c-b1f3-80ac-939f-fa97ddce36d2",
+       "3c71363c-b1f3-80c6-9106-f86ebaa21fe0"
+      ],
+      "format": {
+       "page_icon": "\ud83d\udc4b",
+       "copied_from_pointer": {
+        "id": "24d17954-d9c2-80a5-a3bd-fff2e14709a3",
+        "table": "block",
+        "spaceId": "1f88cc90-92fd-4ce4-bfcd-25daec2ffbbe"
+       }
+      },
+      "permissions": [
+       {
+        "role": "editor",
+        "type": "user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665904275,
+      "last_edited_time": 1787665904334,
+      "parent_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "parent_table": "space",
+      "alive": true,
+      "copied_from": "24d17954-d9c2-80a5-a3bd-fff2e14709a3",
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "-zaGCVMV7QRJjQrwPHyJpw,\"start\",\"end\"",
+        "n": {
+         "-zaGCVMV7QRJjQrwPHyJpw,\"start\",\"end\"": {
+          "s": {
+           "x": "-zaGCVMV7QRJjQrwPHyJpw",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "Gal74vpM8pmg",
+              1
+             ],
+             "o": "start",
+             "l": 15,
+             "c": "Getting Started"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "editor"
+    }
+   },
+   "3c71363c-b1f3-80e6-8347-d370d1f60b0f": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "3c71363c-b1f3-80e6-8347-d370d1f60b0f",
+      "version": 8,
+      "type": "page",
+      "properties": {
+       "title": [
+        [
+         "To Do List"
+        ]
+       ]
+      },
+      "content": [
+       "3c71363c-b1f3-80d4-be06-fc784ea0d719",
+       "3c71363c-b1f3-8097-824e-cf59c9b74ce7"
+      ],
+      "format": {
+       "page_icon": "/icons/checklist_green.svg",
+       "copied_from_pointer": {
+        "id": "24d17954-d9c2-8073-9647-ed606f3fd55a",
+        "table": "block",
+        "spaceId": "1f88cc90-92fd-4ce4-bfcd-25daec2ffbbe"
+       }
+      },
+      "permissions": [
+       {
+        "role": "editor",
+        "type": "user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665903687,
+      "last_edited_time": 1787665903925,
+      "parent_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "parent_table": "space",
+      "alive": true,
+      "copied_from": "24d17954-d9c2-8073-9647-ed606f3fd55a",
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "ee3aIiTpZwf6gWyaw1U2-A,\"start\",\"end\"",
+        "n": {
+         "ee3aIiTpZwf6gWyaw1U2-A,\"start\",\"end\"": {
+          "s": {
+           "x": "ee3aIiTpZwf6gWyaw1U2-A",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "yOLQoBLxIxUz",
+              1
+             ],
+             "o": "start",
+             "l": 10,
+             "c": "To Do List"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "editor"
+    }
+   },
+   "e84927e1-4e97-4bf7-b9eb-015c6899ed99": {
+    "spaceId": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+    "value": {
+     "value": {
+      "id": "e84927e1-4e97-4bf7-b9eb-015c6899ed99",
+      "version": 2,
+      "type": "personal_home_page",
+      "properties": {
+       "title": [
+        [
+         "Home"
+        ]
+       ]
+      },
+      "content": [
+       "c084dfab-5770-4646-8ab1-b30a95434aab",
+       "ab354eed-827c-4265-9ae4-edb88566edbc",
+       "a62a4f88-739d-43b1-8c59-66d4db02cbc4",
+       "2dc0998c-281d-4d3e-87c3-3443da43d791"
+      ],
+      "format": {
+       "system_block_type": "home_main"
+      },
+      "permissions": [
+       {
+        "role": "read_and_write",
+        "type": "exclusive_user_permission",
+        "user_id": "3c7d872b-594c-81aa-a090-0002b06adcfb"
+       }
+      ],
+      "created_time": 1787665893655,
+      "last_edited_time": 1787665893655,
+      "parent_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "parent_table": "space",
+      "alive": true,
+      "ignore_block_count": true,
+      "is_template": false,
+      "created_by_table": "notion_user",
+      "created_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "last_edited_by_table": "notion_user",
+      "last_edited_by_id": "3c7d872b-594c-81aa-a090-0002b06adcfb",
+      "space_id": "5b01363c-b1f3-81a1-af65-000362ddc30a",
+      "crdt_format_version": 1,
+      "crdt_data": {
+       "title": {
+        "r": "ZQM-ypnXXPc6FUR7IRX2tg,\"start\",\"end\"",
+        "n": {
+         "ZQM-ypnXXPc6FUR7IRX2tg,\"start\",\"end\"": {
+          "s": {
+           "x": "ZQM-ypnXXPc6FUR7IRX2tg",
+           "i": [
+            {
+             "t": "s"
+            },
+            {
+             "t": "t",
+             "i": [
+              "59SK6P1OsuI9",
+              1
+             ],
+             "o": "start",
+             "l": 4,
+             "c": "Home"
+            },
+            {
+             "t": "e"
+            }
+           ],
+           "l": ""
+          },
+          "c": []
+         }
+        }
+       }
+      }
+     },
+     "role": "read_and_write"
+    }
+   }
+  }
+ }
+}

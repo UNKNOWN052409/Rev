@@ -139,6 +139,13 @@ async def models():
     for mid in ("qwen3.7-plus", "qwen3.8-max"):
         data.append({"id": mid, "object": "model",
                      "owned_by": "qwen", "ready": True})
+    # notion ke real models
+    from universal_bridge import NOTION_MODELS as _NM
+    for short, mid in _NM.items():
+        data.append({"id": "notion-" + short.replace(".", "-"),
+                     "object": "model", "owned_by": "notion", "ready": True})
+        data.append({"id": mid, "object": "model",
+                     "owned_by": "notion", "ready": True})
     return {"object": "list", "data": data}
 
 
@@ -154,7 +161,14 @@ async def chat_completions(request: Request):
     is_stream = body.get("stream", False)
 
     # real model ids + aliases -> connector name resolve
-    connector_name = "qwen" if model.startswith("qwen") else model
+    from universal_bridge import NOTION_MODELS
+    if model.startswith("qwen"):
+        connector_name = "qwen"
+    elif (model.startswith("notion") or model in NOTION_MODELS
+          or model in NOTION_MODELS.values()):
+        connector_name = "notion"
+    else:
+        connector_name = model
     requested_model = model   # response me yahi jayega
 
     worker = get_worker(connector_name)
