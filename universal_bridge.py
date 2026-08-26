@@ -1021,6 +1021,6 @@ class DeepSeekChatConnector(BaseConnector):
 CONNECTOR_CLASSES = {
     "qwen": QwenConnector,
     "notion": NotionConnector,
-    "deepseek": DeepSeekConnector,
+    "deepseek": DeepSeekChatConnector,
     "figma": FigmaConnector,
 }

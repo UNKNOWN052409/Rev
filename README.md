@@ -1,119 +1,218 @@
-# RE Toolkit — Universal MITM Bridge (Qwen + Notion + Figma as OpenAI API)
+# Rev: A Machine-to-Machine Bridge for Unified AI Model Access
 
-Mobile app reverse engineering + LLM API forensics + **universal app-AI bridge**.
+**Abstract.** We present *Rev*, a self-hosted machine-to-machine (M2M) bridge that exposes multiple consumer AI applications (Qwen, Notion AI, DeepSeek) through a single OpenAI-compatible API. Rev employs man-in-the-middle (MITM) traffic capture to reverse-engineer proprietary web chat protocols, then replays them via pure HTTP connectors. The system features an OAuth-inspired token management layer, a CLI interface, and a self-hosted Firecrawl instance for web intelligence.
 
-## QUICK START — Universal Server (M2M)
+---
+
+## 1. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Rev M2M Bridge                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────┐    ┌──────────────┐    ┌─────────────────────┐   │
+│  │  Rev CLI │───▶│ Token Store  │───▶│  Provider Connector │   │
+│  │  (rev)   │    │ (OAuth-like) │    │  (pure HTTP)        │   │
+│  └──────────┘    └──────────────┘    └──────────┬──────────┘   │
+│                                                  │               │
+│  ┌──────────────┐    ┌──────────────┐           │               │
+│  │  Universal   │◀───│  Firecrawl   │           │               │
+│  │  Server      │    │  (self-host) │           │               │
+│  │  :8000/v1    │    │  :3002       │           │               │
+│  └──────────────┘    └──────────────┘           │               │
+│                                                  │               │
+└──────────────────────────────────────────────────┼───────────────┘
+                                                   │
+                    ┌──────────────────────────────┼──────────────┐
+                    │         Upstream AI Providers              │
+                    ├──────────────┬───────────────┼──────────────┤
+                    │  chat.qwen.ai│ notion.so/api │chat.deepseek │
+                    │  (SSE)       │ (NDJSON)      │(SSE + PoW)   │
+                    └──────────────┴───────────────┴──────────────┘
+```
+
+## 2. Threat Model & Methodology
+
+### 2.1 Traffic Capture (MITM)
+
+Rev captures API traffic using browser-level network interception:
+
+| Method | Tool | Use Case |
+|--------|------|----------|
+| CDP Interception | CloakBrowser + Playwright | Initial capture, WAF bypass |
+| Proxy MITM | Burp Suite / mitmproxy | Production capture, request modification |
+| Pure HTTP Replay | curl_cffi (TLS impersonation) | Runtime connector (no browser) |
+
+### 2.2 Authentication Flow
+
+```
+┌─────────┐     ┌─────────────┐     ┌──────────────┐
+│  User   │────▶│  Rev CLI    │────▶│  Provider    │
+│         │     │  (login)    │     │  (upstream)  │
+└─────────┘     └──────┬──────┘     └──────┬───────┘
+                       │                    │
+                       │  1. Credentials    │
+                       │  (email/pass/      │
+                       │   cookies/OAuth)   │
+                       │                    │
+                       │  2. Token Exchange │
+                       │◀───────────────────│
+                       │  (access_token,    │
+                       │   refresh_token,   │
+                       │   expires_in)      │
+                       │                    │
+                       │  3. Store          │
+                       │  (~/.rev/tokens)   │
+                       ▼                    │
+                ┌─────────────┐             │
+                │ Token Store │             │
+                │ (encrypted) │             │
+                └─────────────┘             │
+                       │                    │
+                       │  4. API Call       │
+                       │  (Bearer token)    │
+                       │───────────────────▶│
+                       │                    │
+                       │  5. Response       │
+                       │◀───────────────────│
+                       │  (SSE/NDJSON)      │
+```
+
+## 3. Provider Connectors
+
+### 3.1 Qwen (chat.qwen.ai)
+
+| Component | Detail |
+|-----------|--------|
+| Auth | Cookie-based (`token=JWT`) |
+| Device Fingerprint | `bx-umidtoken` header |
+| Flow | `POST /api/v2/chats/new` → `POST /api/v2/chat/completions` |
+| Response | SSE (`data: {...}`) |
+| Models | `qwen3.7-plus`, `qwen3.8-max` |
+| Limits | **Unlimited** (free web chat) |
+
+### 3.2 Notion AI (notion.so)
+
+| Component | Detail |
+|-----------|--------|
+| Auth | `token_v2` cookie |
+| Flow | `POST /api/v3/runInferenceTranscript` |
+| Response | NDJSON (patch operations) |
+| Models | 31 models (Sonnet, Opus, GPT, Gemini, etc.) |
+| Limits | 75 credits/space (free tier) |
+
+### 3.3 DeepSeek (chat.deepseek.com)
+
+| Component | Detail |
+|-----------|--------|
+| Auth | Bearer token (login API) |
+| PoW | `x-ds-pow-response` header (SHA-256 brute force) |
+| Flow | `POST /api/v0/chat_session/create` → `POST /api/v0/chat/completion` |
+| Response | SSE (fragment patches) |
+| Models | `default`, `expert`, `deep_think`, `search`, `vision` |
+| Limits | Rate-limited (free web chat) |
+
+## 4. CLI Reference
 
 ```bash
-# 1. Setup (ek baar):
-python3.11 -m venv venv
-./venv/bin/pip install -r requirements.txt openai curl_cffi
-./venv/bin/python -m playwright install chromium
+# Authentication
+rev login qwen --email user@x.com --pass secret
+rev login notion --cookies cookies.json
+rev login deepseek --google
 
-# 2. Qwen login (ek baar — persistent profile):
-./start.sh --login
+# Chat
+rev chat qwen "write a function" --model qwen3.8-max --stream
+rev chat deepseek "explain quantum computing" --model deep_think
 
-# 3. Universal server (qwen + notion + figma):
-./start.sh --universal
+# Server (M2M)
+rev serve --port 8000 --api-key my-secret
+
+# Web Intelligence (Firecrawl)
+rev search "latest AI papers" --limit 5
+rev scrape https://arxiv.org/abs/2401.04088 --format markdown
+
+# Management
+rev models
+rev status
+rev token qwen
+rev revoke notion
 ```
 
-```python
-from openai import OpenAI
-# LAN pe koi bhi device (M2M):
-client = OpenAI(base_url="http://<kali-ip>:8000/v1", api_key="m2m-key")
-r = client.chat.completions.create(
-    model="qwen",   # qwen | notion | figma
-    messages=[{"role": "user", "content": "hello"}],
-)
-print(r.choices[0].message.content)
-```
-
-## Architecture
-
-```
-Koi bhi device (phone/laptop/PC)
-    |
-    v
-http://<ip>:8000/v1  {model: "qwen"|"notion"|"figma"}  [Bearer m2m-key]
-    |
-[Universal Router]  — model se connector
-    |--- QwenConnector   : in-page fetch + SSE intercept (WAF-proof)
-    |--- NotionConnector : pure HTTP (loginWithEmail API + token_v2)
-    |--- FigmaConnector  : capture-based replay
-    |
-Har connector: persistent profile -> login EK baar -> 0% interaction
-Response packets NETWORK LAYER se intercept (DOM scraping nahi)
-```
-
-## Notion (Pure HTTP — ZERO browser)
+## 5. M2M API (OpenAI-Compatible)
 
 ```bash
-./venv/bin/python notion_pure.py --email <email> --pass <password>
-# loginWithEmail API -> token_v2 -> AI endpoint probe -> live test
-# Notion AI internally Claude use karta hai — effectively Claude-as-API
+# Chat completion
+curl http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer m2m-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "stream": true
+  }'
+
+# List models
+curl http://localhost:8000/v1/models \
+  -H "Authorization: Bearer m2m-key"
 ```
 
-## Naya App Add Karna (Burp-style capture)
+## 6. Firecrawl (Self-Hosted)
 
 ```bash
-./start.sh --login-app <app>    # ek baar login (visible browser)
-./start.sh --capture <app>      # AI feature manually use karo —
-                                # tool POST/GET/headers/body sab capture karega
-./start.sh --universal          # model="<app>" ready
+# Start Firecrawl
+docker compose up -d
+
+# Verify
+curl http://localhost:3002/health
+
+# Search
+curl http://localhost:3002/v1/search \
+  -H "Authorization: Bearer fc-self-hosted" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "AI research", "limit": 5}'
+
+# Scrape
+curl http://localhost:3002/v1/scrape \
+  -H "Authorization: Bearer fc-self-hosted" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "formats": ["markdown"]}'
 ```
 
-Capture tool AI-hint wale requests filter karta hai (chat/completion/
-generate/stream), list dikhata hai, tu endpoint choose karta hai —
-`connectors/<app>_flow.json` ban jata hai.
+## 7. Security Considerations
 
-## Files
+| Concern | Mitigation |
+|---------|------------|
+| Token storage | XOR-obfuscated, `chmod 600` |
+| TLS fingerprinting | `curl_cffi impersonate="chrome131"` |
+| WAF bypass | CloakBrowser (anti-detect Chromium) |
+| PoW challenges | SHA-256 brute force solver |
+| Rate limiting | Exponential backoff, request queuing |
 
-| File | Kaam |
-|------|------|
-| `universal_server.py` | EK server — model routing + API key + M2M (LAN) |
-| `universal_bridge.py` | Connector framework + Qwen/Notion/Figma |
-| `capture_flow.py` | Burp-style AI endpoint capture (kisi bhi app) |
-| `notion_pure.py` | Notion pure-HTTP client (zero browser) |
-| `qwen_browser_bridge.py` | Qwen-only bridge (MITM fetch + SSE intercept) |
-| `login_auto.py` | Qwen auto-login (creds se, persistent profile) |
-| `app_to_api_server.py` | HTTP replay adapter (captured token se) |
-| `mobile_re.py` | mitmproxy addon — capture, endpoint map, token hunting |
-| `auto_pipeline.py` | Captured flows -> config.json |
-| `flow_to_api.py` | Captured flow -> replayable Python client |
-| `qwen_token_harvest.py` | localStorage/network se Bearer token |
-| `ssl_unpin.js` | Frida universal SSL pinning bypass |
-| `api_forensics_v2.py` | LLM API forensics — spoof detection, tokenizer fingerprint |
-| `mock_qwen_upstream.py` | Test-only mock (self-test ke liye) |
-| `run_full_test.py` | 8-point self-test chain |
-| `start.sh` | Master control |
-
-## Real Qwen API Surface (probed 2026-08)
-
-- Models (no auth): `GET /api/models` -> `qwen3.7-plus`, `qwen3.8-max`
-- Guest flow: `/api/v2/chats/new` -> `/api/v2/chat/completions?chat_id=` (SSE)
-- Auth: cookie-based (web), Bearer JWT (localStorage)
-- **Aliyun WAF**: completions pe JS-generated x5sec maangta hai —
-  pure HTTP replay impossible (RGV587 punish). Isliye in-page fetch
-  + network-layer intercept = reliable path.
-
-## Commands
+## 8. File Structure
 
 ```
-./start.sh --universal    EK server: qwen+notion+figma (M2M)
-./start.sh --capture      app ka AI endpoint capture
-./start.sh --login-app    connector login
-./start.sh --login        qwen login
-./start.sh --serve        qwen-only server
-./start.sh --serve-http   HTTP replay mode
-./start.sh --mitm         phone/Burp capture mode
-./start.sh --local        offline GGUF backup
-./start.sh --test         self-test (8 checks)
-./start.sh --status       status
+Rev/
+├── rev_cli.py           # CLI entry point
+├── rev_auth.py          # OAuth-like token store
+├── rev_firecrawl.py     # Firecrawl client
+├── universal_bridge.py  # Provider connectors (MITM)
+├── universal_server.py  # M2M API server
+├── docker-compose.yml   # Firecrawl self-hosted
+├── connectors/          # Captured flows + profiles
+│   ├── ds_chat_capture.json
+│   ├── notion_ai_flow.json
+│   └── profile_*/
+└── README.md            # This document
 ```
 
-## SECURITY
+## 9. References
 
-`config.json`, `browser_profile/`, `connectors/` me **live tokens/cookies**
-hote hain — `.gitignore` me sab blocked hai. Kabhi manually add mat karna.
+1. OAuth 2.0 Authorization Framework — RFC 6749
+2. Firecrawl Self-Host Documentation — https://docs.firecrawl.dev/contributing/self-host
+3. curl_cffi TLS Impersonation — https://curl-cffi.readthedocs.io/
+4. CloakBrowser Anti-Detect — https://github.com/CloakHQ/CloakBrowser
 
-## Authorized testing only.
+---
+
+*Rev is a research project for educational purposes. All provider interactions should comply with their respective Terms of Service.*
