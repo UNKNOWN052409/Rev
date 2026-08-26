@@ -684,8 +684,113 @@ class FigmaConnector(BaseConnector):
     parse_response = lambda self, raw: parse_sse_full(raw, FigmaConnector.parse_chunk)
 
 
+class DeepSeekConnector(BaseConnector):
+    """DeepSeek API — OpenAI-compatible, direct HTTP (no browser).
+    Auth: Bearer token (api.deepseek.com platform se).
+    Models: deepseek-chat (V3), deepseek-reasoner (R1), deepseek-v4-pro/flash."""
+    name = "deepseek"
+    API_BASE = "https://api.deepseek.com/v1"
+    MODEL_ALIASES = {
+        "deepseek": "deepseek-chat",
+        "deepseek-chat": "deepseek-chat",
+        "deepseek-reasoner": "deepseek-reasoner",
+        "deepseek-v4-pro": "deepseek-v4-pro",
+        "deepseek-v4-flash": "deepseek-v4-flash",
+        "deepseek-r1": "deepseek-reasoner",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.api_key = ""
+        self._load_key()
+
+    def _load_key(self):
+        key_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "deepseek_api_key.txt")
+        if os.path.exists(key_path):
+            with open(key_path) as f:
+                self.api_key = f.read().strip()
+        if not self.api_key:
+            raise RuntimeError(
+                "deepseek: api_key nahi mila — "
+                "deepseek_api_key.txt chahiye")
+
+    def start(self):
+        pass  # no browser — direct API
+
+    def is_logged_in(self):
+        return bool(self.api_key)
+
+    def chat(self, messages, timeout_s=120, stream_cb=None,
+             model="deepseek"):
+        from curl_cffi import requests as cr
+        real_model = self.MODEL_ALIASES.get(model, model)
+        prompt = render_prompt(messages)
+        headers = {
+            "Authorization": "Bearer " + self.api_key,
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": real_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+        }
+        r = cr.post(
+            self.API_BASE + "/chat/completions",
+            headers=headers, json=body,
+            impersonate="chrome131",
+            timeout=(15, timeout_s), stream=True)
+        if r.status_code == 402:
+            raise RuntimeError(
+                "deepseek: Insufficient Balance — "
+                "platform.deepseek.com/topup pe $5 add karo")
+        if r.status_code != 200:
+            raise RuntimeError(
+                "deepseek: HTTP " + str(r.status_code) +
+                " " + r.text[:200])
+        pieces = []
+        for line in r.iter_lines():
+            if isinstance(line, bytes):
+                line = line.decode("utf-8", "ignore")
+            line = line.strip()
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            piece = self.parse_chunk(data)
+            if piece:
+                pieces.append(piece)
+                if stream_cb:
+                    try:
+                        stream_cb(piece)
+                    except Exception:
+                        pass
+        text = "".join(pieces).strip()
+        if not text:
+            raise RuntimeError("deepseek: empty response")
+        return text
+
+    @staticmethod
+    def parse_chunk(raw):
+        try:
+            d = json.loads(raw)
+        except Exception:
+            return None
+        choices = d.get("choices", [])
+        if choices:
+            delta = choices[0].get("delta", {})
+            return (delta.get("content")
+                    or delta.get("reasoning_content"))
+        return None
+
+    parse_response = lambda self, raw: parse_sse_full(
+        raw, DeepSeekConnector.parse_chunk)
+
+
 CONNECTOR_CLASSES = {
     "qwen": QwenConnector,
     "notion": NotionConnector,
+    "deepseek": DeepSeekConnector,
     "figma": FigmaConnector,
 }

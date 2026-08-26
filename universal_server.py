@@ -139,6 +139,18 @@ async def models():
     for mid in ("qwen3.7-plus", "qwen3.8-max"):
         data.append({"id": mid, "object": "model",
                      "owned_by": "qwen", "ready": True})
+    # deepseek models
+    DEEPSEEK_MODELS = {
+        "deepseek": "deepseek-chat",
+        "deepseek-chat": "deepseek-chat",
+        "deepseek-reasoner": "deepseek-reasoner",
+        "deepseek-r1": "deepseek-reasoner",
+        "deepseek-v4-pro": "deepseek-v4-pro",
+        "deepseek-v4-flash": "deepseek-v4-flash",
+    }
+    for alias, real in DEEPSEEK_MODELS.items():
+        data.append({"id": alias, "object": "model",
+                     "owned_by": "deepseek", "ready": True})
     # notion ke real models
     from universal_bridge import NOTION_MODELS as _NM
     for short, mid in _NM.items():
@@ -164,6 +176,8 @@ async def chat_completions(request: Request):
     from universal_bridge import NOTION_MODELS
     if model.startswith("qwen"):
         connector_name = "qwen"
+    elif model.startswith("deepseek"):
+        connector_name = "deepseek"
     elif (model.startswith("notion") or model in NOTION_MODELS
           or model in NOTION_MODELS.values()):
         connector_name = "notion"
@@ -174,7 +188,7 @@ async def chat_completions(request: Request):
     worker = get_worker(connector_name)
     if worker is None:
         return JSONResponse({"error": {"message":
-            f"model '{model}' nahi hai. Available: qwen, notion, figma, "
+            f"model '{model}' nahi hai. Available: qwen, notion, deepseek, "
             f"qwen3.7-plus, qwen3.8-max", "type": "bad_model"}},
             status_code=400)
 
@@ -280,6 +294,15 @@ def do_login(app_name):
         print(f"[!] '{app_name}' connector nahi hai. Available: "
               f"{list(CONNECTOR_CLASSES.keys())}")
         return 1
+    if app_name == "deepseek":
+        key_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "deepseek_api_key.txt")
+        if os.path.exists(key_path):
+            print(f"[+] deepseek: api key hai — {key_path}")
+            return 0
+        print("[!] deepseek: pehle platform.deepseek.com se "
+              "api key banao, phir deepseek_api_key.txt me save karo")
+        return 1
     c = cls()
     if not os.environ.get("DISPLAY"):
         print("[!] Display nahi — apne desktop se chalao ya xvfb use karo")
@@ -324,6 +347,13 @@ def do_status():
                 os.path.join(profile, "Default")) else "setup pending")
         if name == "qwen":
             state = "READY (built-in)"
+        elif name == "deepseek":
+            key_path = os.path.join(
+                os.path.dirname(CONNECTORS_DIR), "deepseek_api_key.txt")
+            if os.path.exists(key_path):
+                state = "READY (api key hai)"
+            else:
+                state = "api key pending"
         print(f"   {name:8s} : {state}")
     print(f"\n API key : {DEFAULT_KEY}")
     print(f" LAN IPs : {lan_ips()}")
