@@ -1,0 +1,69 @@
+{
+ "requests": [
+  {
+   "url": "https://chat.deepseek.com/api/v0/chat_session/create",
+   "headers": {
+    "x-client-locale": "en_US",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "Bearer 78RdhPGTlnn+2Mq+fUzqIdGR0mHueLD6P770gkbHSDxLq7+kuvFw4VPzP3WIdNvb",
+    "x-client-bundle-id": "com.deepseek.chat",
+    "referer": "https://chat.deepseek.com/",
+    "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
+    "sec-ch-ua-mobile": "?0",
+    "x-client-timezone-offset": "0",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "x-client-version": "2.4.0",
+    "accept": "*/*",
+    "content-type": "application/json",
+    "x-client-platform": "web"
+   },
+   "body": "{}"
+  },
+  {
+   "url": "https://chat.deepseek.com/api/v0/chat_session/create",
+   "headers": {
+    "x-client-locale": "en_US",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "Bearer 78RdhPGTlnn+2Mq+fUzqIdGR0mHueLD6P770gkbHSDxLq7+kuvFw4VPzP3WIdNvb",
+    "x-client-bundle-id": "com.deepseek.chat",
+    "referer": "https://chat.deepseek.com/a/chat/s/9f7593bf-797b-4553-aed7-cf821df05399",
+    "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
+    "sec-ch-ua-mobile": "?0",
+    "x-client-timezone-offset": "0",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "x-client-version": "2.4.0",
+    "accept": "*/*",
+    "content-type": "application/json",
+    "x-client-platform": "web"
+   },
+   "body": "{}"
+  },
+  {
+   "url": "https://chat.deepseek.com/api/v0/chat/completion",
+   "headers": {
+    "x-client-locale": "en_US",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "authorization": "Bearer 78RdhPGTlnn+2Mq+fUzqIdGR0mHueLD6P770gkbHSDxLq7+kuvFw4VPzP3WIdNvb",
+    "x-client-bundle-id": "com.deepseek.chat",
+    "referer": "https://chat.deepseek.com/a/chat/s/9f7593bf-797b-4553-aed7-cf821df05399",
+    "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
+    "sec-ch-ua-mobile": "?0",
+    "x-ds-pow-response": "eyJhbGdvcml0aG0iOiJEZWVwU2Vla0hhc2hWMSIsImNoYWxsZW5nZSI6ImFhODY0YjUyYjlhMjRiODRiMDRmZWE1YTE5OTRlMGFlYjIxMmQ0NTMyN2ZmM2U1MmMzYWI1MWY2MmJmZjQ2NGIiLCJzYWx0IjoiYmM5NDBjNWQ0OTZjMGVjYjUzNjEiLCJhbnN3ZXIiOjkxODQ5LCJzaWduYXR1cmUiOiJhNWUxNzg2M2I0YzNiYWZlOGQwMjIwNzFiY2JhZDBjMjEwYTliMWU3YmExZTA1NThjMzI1YTE1YmRlMmYyYzYwIiwidGFyZ2V0X3BhdGgiOiIvYXBpL3YwL2NoYXQvY29tcGxldGlvbiJ9",
+    "x-client-timezone-offset": "0",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "x-client-version": "2.4.0",
+    "accept": "*/*",
+    "content-type": "application/json",
+    "x-client-platform": "web"
+   },
+   "body": "{\"chat_session_id\":\"9f7593bf-797b-4553-aed7-cf821df05399\",\"parent_message_id\":null,\"model_type\":\"default\",\"prompt\":\"Hello, say hi in one word\",\"ref_file_ids\":[],\"thinking_enabled\":false,\"search_enabled\":true,\"action\":null,\"preempt\":false}"
+  }
+ ],
+ "sse": [
+  {
+   "url": "https://chat.deepseek.com/api/v0/chat/completion",
+   "ct": "text/event-stream; charset=utf-8",
+   "body": "event: ready\ndata: {\"request_message_id\":1,\"response_message_id\":2,\"model_type\":\"default\"}\n\nevent: update_session\ndata: {\"updated_at\":1787775249.061599}\n\ndata: {\"v\":{\"response\":{\"message_id\":2,\"parent_id\":1,\"model\":\"\",\"role\":\"ASSISTANT\",\"thinking_enabled\":false,\"ban_edit\":false,\"ban_regenerate\":false,\"status\":\"WIP\",\"incomplete_message\":null,\"accumulated_token_usage\":0,\"feedback\":null,\"inserted_at\":1787775249.050309,\"search_enabled\":true,\"fragments\":[{\"id\":2,\"type\":\"RESPONSE\",\"content\":\"Hi\",\"references\":[],\"stage_id\":1}],\"conversation_mode\":\"DEFAULT\",\"has_pending_fragment\":false,\"auto_continue\":false,\"search_triggered\":false}}}\n\ndata: {\"p\":\"response/fragments/-1/content\",\"o\":\"APPEND\",\"v\":\".\"}\n\ndata: {\"p\":\"response\",\"o\":\"BATCH\",\"v\":[{\"p\":\"accumulated_token_usage\",\"v\":40},{\"p\":\"quasi_status\",\"v\":\"FINISHED\"}]}\n\ndata: {\"p\":\"response/status\",\"o\":\"SET\",\"v\":\"FINISHED\"}\n\nevent: update_session\ndata: {\"updated_at\":1787775249.2790148}\n\nevent: title\ndata: {\"content\":\"Hi\"}\n\nevent: close\ndata: {\"click_behavior\":\"none\",\"auto_resume\":false}\n\n"
+  }
+ ]
+}
