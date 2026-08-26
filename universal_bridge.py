@@ -331,7 +331,7 @@ class QwenConnector(BaseConnector):
                     const {done, value} = await Promise.race([
                         reader.read(),
                         new Promise((_, rej) => setTimeout(
-                            () => rej(new Error("stall")), 45000))]);
+                            () => rej(new Error("stall")), 120000))]);
                     if (done) break;
                     buf += dec.decode(value, {stream: true});
                     const lines = buf.split("\\n");
