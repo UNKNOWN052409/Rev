@@ -685,11 +685,11 @@ class FigmaConnector(BaseConnector):
 
 
 class DeepSeekChatConnector(BaseConnector):
-    """DeepSeek Web Chat — MITM capture, browser-context fetch.
-    Auth: login se token → Bearer header.
-    Flow: login → chat_session/create → chat/completion (SSE).
-    PoW: create_pow_challenge → frontend auto-solve.
-    Captured: connectors/ds_chat_capture.json"""
+    """DeepSeek Web Chat — TRUE MITM, pure HTTP (curl_cffi).
+    No browser at runtime — sirf login ke baad token reuse.
+    Captured: connectors/ds_chat_capture.json
+    Flow: login → create_pow_challenge → solve → chat/completion → SSE.
+    PoW: x-ds-pow-response header (base64 JSON)."""
     name = "deepseek"
     login_url = "https://chat.deepseek.com/sign_in"
     profile_dir = os.path.join(CONNECTORS_DIR, "profile_ds_chat")
@@ -705,179 +705,193 @@ class DeepSeekChatConnector(BaseConnector):
         "deepseek-vision": "vision",
     }
 
+    HEADERS = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-client-locale": "en_US",
+        "x-client-bundle-id": "com.deepseek.chat",
+        "x-client-version": "2.4.0",
+        "x-client-platform": "web",
+        "x-client-timezone-offset": "0",
+        "Referer": "https://chat.deepseek.com/",
+    }
+
     def __init__(self):
         super().__init__()
         self._token = ""
+        self._uid = ""
 
     def start(self):
-        """Browser start — login se token milega."""
-        super().start()
-        self._do_login()
+        self._load_token()
 
-    def _do_login(self):
-        """Direct fetch login (page context, WAF cookies auto-bhejega)."""
-        page = self.page
-        page.goto(self.login_url, wait_until="domcontentloaded",
-                  timeout=60000)
-        page.wait_for_timeout(18000)
-        DID = str(uuid.uuid4())
-        lr = page.evaluate("""async () => {
-            const r = await fetch('%s/users/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: '%s', password: '%s',
-                    locale: 'en_US', device_id: '%s',
-                    os: 'Windows'
-                })
-            });
-            return await r.text();
-        }""" % (self.api, "unknown@havenhaus.in",
-                "Bankai@2580", DID))
-        ld = json.loads(lr)
-        token = (ld.get("data", {}).get("biz_data", {})
-                 .get("user", {}).get("token", ""))
-        if not token:
-            raise RuntimeError(
-                "deepseek: login fail — " + lr[:200])
-        self._token = token
-        # Navigate to chat (cookies auto-set honge)
-        page.evaluate("t => localStorage.setItem('token', t)", token)
-        page.goto("https://chat.deepseek.com",
-                  wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_timeout(15000)
-        # Remove age verification modal if present
-        page.evaluate("""() => {
-            const lock = document.querySelector('.ds-modal-focus-lock');
-            if (lock) {
-                const m = lock.closest('[class*="modal"]') ||
-                          lock.parentElement;
-                if (m) m.remove();
-            }
-            document.body.style.overflow = 'auto';
-        }""")
+    def _load_token(self):
+        token_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "deepseek_token.txt")
+        if os.path.exists(token_path):
+            with open(token_path) as f:
+                data = json.load(f)
+                self._token = data.get("token", "")
+                self._uid = data.get("uid", "")
+
+    def _save_token(self):
+        token_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "deepseek_token.txt")
+        with open(token_path, "w") as f:
+            json.dump({"token": self._token, "uid": self._uid}, f)
 
     def is_logged_in(self):
         return bool(self._token)
 
+    def _ensure_login(self):
+        if self._token:
+            return
+        # Browser se ek baar login (WAF ke liye)
+        self.login_with_browser()
+
+    def login_with_browser(self):
+        """Browser se login — token capture + save."""
+        from ghostrise.engine import GhostSession
+        with GhostSession(profile="ds_login", humanize=True) as s:
+            page = s.browser.new_page()
+            page.goto(self.login_url, wait_until="domcontentloaded",
+                      timeout=60000)
+            page.wait_for_timeout(18000)
+            lr = page.evaluate("""async () => {
+                const r = await fetch('%s/users/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: 'unknown@havenhaus.in',
+                        password: 'Bankai@2580',
+                        locale: 'en_US',
+                        device_id: '%s',
+                        os: 'Windows'
+                    })
+                });
+                return await r.text();
+            }""" % (self.api, str(uuid.uuid4())))
+            ld = json.loads(lr)
+            self._token = (ld.get("data", {}).get("biz_data", {})
+                           .get("user", {}).get("token", ""))
+            self._uid = (ld.get("data", {}).get("biz_data", {})
+                         .get("user", {}).get("id", ""))
+            if not self._token:
+                raise RuntimeError("deepseek: login fail — " + lr[:200])
+            self._save_token()
+
+    def _solve_pow(self, target_path="/api/v0/chat/completion"):
+        """PoW challenge solve — DeepSeekHashV1 (SHA-256 brute force)."""
+        import base64
+        from curl_cffi import requests as cr
+        r = cr.post(
+            self.api + "/chat/create_pow_challenge",
+            headers={**self.HEADERS,
+                     "Authorization": "Bearer " + self._token},
+            json={"target_path": target_path},
+            impersonate="chrome131", timeout=15)
+        if r.status_code != 200:
+            raise RuntimeError("pow: HTTP " + str(r.status_code))
+        bd = r.json().get("data", {}).get("biz_data", {}).get(
+            "challenge", {})
+        challenge = bd.get("challenge", "")
+        salt = bd.get("salt", "")
+        signature = bd.get("signature", "")
+        algo = bd.get("algorithm", "DeepSeekHashV1")
+        # Brute force nonce
+        for nonce in range(10_000_000):
+            h = hashlib.sha256(
+                (salt + challenge + str(nonce)).encode()).hexdigest()
+            if h.startswith("0"):
+                solution = {
+                    "algorithm": algo,
+                    "challenge": challenge,
+                    "salt": salt,
+                    "answer": nonce,
+                    "signature": signature,
+                    "target_path": target_path,
+                }
+                return base64.b64encode(
+                    json.dumps(solution).encode()).decode()
+        raise RuntimeError("pow: solve failed")
+
     def chat(self, messages, timeout_s=120, stream_cb=None,
              model="deepseek"):
+        from curl_cffi import requests as cr
         with self.lock:
+            self._ensure_login()
             prompt = render_prompt(messages)
             model_type = self.MODEL_ALIASES.get(model, "default")
-            page = self.page
-            try:
-                page.expose_function("__dsChunk",
-                                     lambda c: self._on_chunk(c))
-            except Exception:
-                pass
-            self._chunks = []
-            self._stream_cb = stream_cb
 
-            result = page.evaluate(
-                """async (args) => {
-                    const [apiBase, token, prompt, modelType,
-                           timeoutMs] = args;
-                    const H = () => ({
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + token,
-                        'Accept': 'application/json',
-                    });
-                    const withTimeout = (p, ms) =>
-                        Promise.race([p, new Promise((_, rej) =>
-                            setTimeout(() => rej(
-                                new Error('timeout')), ms))]);
-                    try {
-                    // 1. Create session
-                    const s1 = await withTimeout(fetch(
-                        apiBase + '/chat_session/create', {
-                        method: 'POST', headers: H(),
-                        credentials: 'include',
-                        body: '{}'
-                    }), 15000);
-                    const sj = await s1.json();
-                    const sid = sj?.data?.biz_data?
-                        ?.chat_session?.id;
-                    if (!sid) return {error: 'session: ' +
-                        JSON.stringify(sj).slice(0, 200)};
+            # 1. Create session
+            r1 = cr.post(
+                self.api + "/chat_session/create",
+                headers={**self.HEADERS,
+                         "Authorization": "Bearer " + self._token},
+                json={},
+                impersonate="chrome131", timeout=15)
+            if r1.status_code != 200:
+                raise RuntimeError("session: HTTP " +
+                                   str(r1.status_code))
+            sid = (r1.json().get("data", {}).get("biz_data", {})
+                   .get("chat_session", {}).get("id", ""))
+            if not sid:
+                raise RuntimeError("session: no id — " +
+                                   r1.text[:200])
 
-                    // 2. PoW challenge (frontend auto-solve)
-                    // Just call completion — frontend handles PoW
-                    // via intercepted fetch
-                    const body = {
-                        chat_session_id: sid,
-                        parent_message_id: null,
-                        model_type: modelType,
-                        prompt: prompt,
-                        ref_file_ids: [],
-                        thinking_enabled:
-                            modelType === 'deep_think',
-                        search_enabled: true,
-                        action: null,
-                        preempt: false,
-                    };
+            # 2. PoW solve
+            pow_header = self._solve_pow()
 
-                    // 3. Chat completion (SSE)
-                    const r2 = await withTimeout(fetch(
-                        apiBase + '/chat/completion', {
-                        method: 'POST', headers: H(),
-                        credentials: 'include',
-                        body: JSON.stringify(body),
-                    }), timeoutMs);
-                    if (!r2.ok) {
-                        const t = await r2.text();
-                        return {error: 'completion ' +
-                            r2.status + ': ' + t.slice(0, 200)};
-                    }
-                    const ct = r2.headers.get('content-type')||'';
-                    if (ct.includes('text/html'))
-                        return {error: 'WAF challenge'};
-                    const reader = r2.body.getReader();
-                    const dec = new TextDecoder();
-                    let buf = '';
-                    const deadline = Date.now() + timeoutMs;
-                    while (true) {
-                        if (Date.now() > deadline)
-                            return {error: 'stream deadline'};
-                        const {done, value} = await Promise
-                            .race([reader.read(),
-                            new Promise((_, rej) => setTimeout(
-                                () => rej(new Error('stall')),
-                                120000))]);
-                        if (done) break;
-                        buf += dec.decode(value, {stream: true});
-                        const lines = buf.split('\\n');
-                        buf = lines.pop();
-                        for (const L of lines) {
-                            const t = L.trim();
-                            if (t.startsWith('data:') &&
-                                window.__dsChunk)
-                                window.__dsChunk(
-                                    t.slice(5).trim());
-                            else if (t.startsWith('event:') &&
-                                     t.includes('close'))
-                                break;
-                        }
-                    }
-                    if (window.__dsChunk)
-                        window.__dsChunk('[[DONE]]');
-                    return {ok: true, sid: sid};
-                    } catch (e) {
-                        return {error: String(e).slice(0, 250)};
-                    }
-                }""",
-                [self.api, self._token, prompt,
-                 model_type, timeout_s * 1000])
+            # 3. Chat completion (SSE)
+            body = {
+                "chat_session_id": sid,
+                "parent_message_id": None,
+                "model_type": model_type,
+                "prompt": prompt,
+                "ref_file_ids": [],
+                "thinking_enabled": model_type == "deep_think",
+                "search_enabled": True,
+                "action": None,
+                "preempt": False,
+            }
+            headers = {
+                **self.HEADERS,
+                "Authorization": "Bearer " + self._token,
+                "x-ds-pow-response": pow_header,
+                "Referer": ("https://chat.deepseek.com/"
+                            "a/chat/s/" + sid),
+            }
+            r2 = cr.post(
+                self.api + "/chat/completion",
+                headers=headers, json=body,
+                impersonate="chrome131",
+                timeout=(15, timeout_s), stream=True)
+            if r2.status_code != 200:
+                raise RuntimeError("completion: HTTP " +
+                                   str(r2.status_code) +
+                                   " " + r2.text[:200])
 
-            if result and result.get("error"):
-                raise RuntimeError(result["error"][:300])
+            # 4. Parse SSE
             pieces = []
-            for raw in self._chunks:
-                if raw in ("[[DONE]]",) or raw.startswith("[[RAW]]"):
+            for line in r2.iter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                line = line.strip()
+                if not line:
                     continue
-                p = self.parse_chunk(raw)
-                if p:
-                    pieces.append(p)
+                if line.startswith("event:"):
+                    if "close" in line:
+                        break
+                    continue
+                if line.startswith("data:"):
+                    data = line[5:].strip()
+                    piece = self.parse_chunk(data)
+                    if piece:
+                        pieces.append(piece)
+                        if stream_cb:
+                            try:
+                                stream_cb(piece)
+                            except Exception:
+                                pass
             text = "".join(pieces).strip()
             if not text:
                 raise RuntimeError("deepseek: empty reply")
@@ -885,15 +899,12 @@ class DeepSeekChatConnector(BaseConnector):
 
     @staticmethod
     def parse_chunk(raw):
-        """DeepSeek SSE: data: {v: {response: {fragments}}}
-        or data: {p: '.../content', o: 'APPEND', v: 'text'}"""
         if raw in ("[DONE]", "null", ""):
             return None
         try:
             d = json.loads(raw)
         except Exception:
             return None
-        # Batch fragment content
         if isinstance(d, dict):
             v = d.get("v")
             if isinstance(v, dict):
@@ -902,10 +913,8 @@ class DeepSeekChatConnector(BaseConnector):
                     frags = resp.get("fragments", [])
                     if frags:
                         return frags[0].get("content")
-                # APPEND operation
                 if v.get("o") == "APPEND" and v.get("v"):
                     return v["v"]
-            # Direct content in data
             if d.get("content"):
                 return d["content"]
         return None
