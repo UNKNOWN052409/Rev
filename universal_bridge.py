@@ -219,11 +219,16 @@ def render_prompt(messages):
 # ================================================================
 
 class QwenConnector(BaseConnector):
+    """Qwen Web Chat — TRUE MITM, pure HTTP (curl_cffi).
+    No browser at runtime — sirf login ke baad token reuse.
+    Captured: captured_v2_flow.json
+    Flow: login → chats/new → chat/completions → SSE.
+    Auth: cookie-based (token=JWT)."""
     name = "qwen"
     login_url = "https://chat.qwen.ai"
     profile_dir = os.path.join(CONNECTORS_DIR, "profile_qwen")
+    api = "https://chat.qwen.ai/api/v2"
 
-    # alias -> real model id (chat.qwen.ai/api/models se)
     MODEL_ALIASES = {
         "qwen": "qwen3.7-plus",
         "qwen-plus": "qwen3.7-plus",
@@ -232,148 +237,237 @@ class QwenConnector(BaseConnector):
         "qwen3.8-max": "qwen3.8-max",
     }
 
+    HEADERS = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/plain, */*",
+        "source": "web",
+        "version": "0.2.87",
+        "bx-v": "2.5.37",
+        "timezone": "Mon Aug 24 2026 18:05:53 GMT+0000",
+        "bx-ua": "default_not_value",
+        "sec-ch-ua": '"Chromium";v="146", "Not-A.Brand";v="24", '
+                     '"Google Chrome";v="146"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "user-agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/146.0.0.0 Safari/537.36"),
+        "accept-language": "en-US,en;q=0.9",
+    }
+
     def __init__(self):
         super().__init__()
+        self._token = ""
         self._umid = ""
-        try:
-            flow = json.load(open("captured_v2_flow.json"))
-            self._umid = flow["requests"][0]["headers"].get("bx-umidtoken", "")
-        except Exception:
-            pass
 
-    def chat(self, messages, timeout_s=120, stream_cb=None, model="qwen"):
-        real = self.MODEL_ALIASES.get(model, "qwen3.7-plus")
-        with self.lock:
-            self._chunks = []
-            self._stream_cb = stream_cb
-            return self._qwen_chat(render_prompt(messages), timeout_s, real)
+    def start(self):
+        self._load_token()
 
-    def _qwen_chat(self, prompt, timeout_s, model_id="qwen3.7-plus"):
-        page = self.page
-        page.goto(self.login_url, wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_timeout(3000)
-        try:
-            page.expose_function("__pyChunk", lambda c: self._on_chunk(c))
-        except Exception:
-            pass
+    def _load_token(self):
+        token_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "qwen_token.json")
+        if os.path.exists(token_path):
+            with open(token_path) as f:
+                data = json.load(f)
+                self._token = data.get("token", "")
+                self._umid = data.get("umid", "")
 
-        result = page.evaluate(
-            """async (args) => {
-                const [prompt, timeoutMs, umid, modelId] = args;
-                const withTimeout = (p, ms) =>
-                    Promise.race([p, new Promise((_, rej) =>
-                        setTimeout(() => rej(new Error("timeout " + ms)), ms))]);
-                const H = () => ({
-                    "Content-Type": "application/json",
-                    "Accept": "application/json, text/plain, */*",
-                    "X-Request-Id": crypto.randomUUID(),
-                    "source": "web",
-                    "version": "0.2.87",
-                    "bx-v": "2.5.37",
-                    "timezone": new Date().toString(),
-                });
-                try {
-                const tsMs = Date.now();
-                const ts = Math.floor(tsMs / 1000);
-                const r1 = await withTimeout(fetch("/api/v2/chats/new", {
-                    method: "POST", headers: H(), credentials: "include",
-                    body: JSON.stringify({chatId: "",
-                        models: [modelId], project_id: "",
-                        timestamp: tsMs, chat_type: "t2t",
-                        chat_mode: "normal"}),
-                }), 20000);
-                const j1 = await r1.json();
-                const cid = j1?.data?.id;
-                if (!cid) return {error: "chats/new: " + JSON.stringify(j1).slice(0,200)};
-                const h2 = H();
-                h2["Accept"] = "application/json";
-                h2["x-accel-buffering"] = "no";
-                if (umid) h2["bx-umidtoken"] = umid;
-                const payload = {
-                    stream: true, version: "2.1",
-                    incremental_output: true,
-                    chatId: cid, parentId: "", chat_id: cid,
-                    chat_mode: "normal", model: modelId,
-                    parent_id: null,
-                    messages: [{id: null, fid: crypto.randomUUID(),
-                        parentId: null, childrenIds: [], role: "user",
-                        content: prompt, user_action: "chat", files: [],
-                        timestamp: ts, models: [modelId],
-                        model: "", chat_type: "t2t",
-                        feature_config: {thinking_enabled: false,
-                            output_schema: "phase",
-                            research_mode: "normal",
-                            auto_thinking: false,
-                            thinking_mode: "Auto",
-                            thinking_format: "summary",
-                            auto_search: false},
-                        extra: {meta: {subChatType: "t2t"}},
-                        sub_chat_type: "t2t", parent_id: null}],
-                    timestamp: ts};
-                const r2 = await withTimeout(fetch(
-                    "/api/v2/chat/completions?chat_id=" + cid, {
-                    method: "POST", headers: h2, credentials: "include",
-                    body: JSON.stringify(payload)}), 20000);
-                if (!r2.ok || !r2.body) {
-                    const t = await r2.text().catch(() => "");
-                    return {error: "completions " + r2.status + ": " + t.slice(0,200)};
-                }
-                const ct = r2.headers.get("content-type") || "";
-                if (ct.includes("text/html"))
-                    return {error: "WAF challenge"};
-                const reader = r2.body.getReader();
-                const dec = new TextDecoder();
-                let buf = "";
-                const deadline = Date.now() + timeoutMs;
-                while (true) {
-                    if (Date.now() > deadline)
-                        return {error: "stream deadline"};
-                    const {done, value} = await Promise.race([
-                        reader.read(),
-                        new Promise((_, rej) => setTimeout(
-                            () => rej(new Error("stall")), 120000))]);
-                    if (done) break;
-                    buf += dec.decode(value, {stream: true});
-                    const lines = buf.split("\\n");
-                    buf = lines.pop();
-                    for (const L of lines) {
-                        const t = L.trim();
-                        if (t.startsWith("data:") && window.__pyChunk)
-                            window.__pyChunk(t.slice(5).trim());
+    def _save_token(self):
+        token_path = os.path.join(
+            os.path.dirname(CONNECTORS_DIR), "qwen_token.json")
+        with open(token_path, "w") as f:
+            json.dump({"token": self._token, "umid": self._umid}, f)
+
+    def is_logged_in(self):
+        return bool(self._token)
+
+    def _ensure_login(self):
+        if self._token:
+            return
+        self.login_with_browser()
+
+    def login_with_browser(self):
+        """Browser se login — token + umid capture + save."""
+        from ghostrise.engine import GhostSession
+        with GhostSession(profile="ds_login_qwen",
+                          humanize=True) as s:
+            page = s.browser.new_page()
+            # Capture token from cookies
+            token_captured = []
+
+            def on_resp(resp):
+                if "token=" in (resp.headers.get("set-cookie", "")):
+                    token_captured.append(
+                        resp.headers.get("set-cookie", ""))
+
+            page.on("response", on_resp)
+
+            page.goto("https://chat.qwen.ai",
+                      wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(20000)
+
+            # Extract token from localStorage
+            ls = page.evaluate("""() => {
+                const keys = Object.keys(localStorage);
+                for (const k of keys) {
+                    const v = localStorage[k];
+                    if (v && v.length > 50 && v.includes('.')) {
+                        try {
+                            const d = JSON.parse(v);
+                            if (d.value && d.value.token)
+                                return d.value.token;
+                        } catch(e) {}
                     }
                 }
-                if (window.__pyChunk) window.__pyChunk("[[DONE]]");
-                return {ok: true};
-                } catch (e) {
-                    return {error: String(e).slice(0, 250)};
-                }
-            }""",
-            [prompt, timeout_s * 1000, self._umid, model_id])
+                // Try direct token key
+                const t = localStorage.getItem('token');
+                if (t) return t;
+                return '';
+            }""")
+            if ls:
+                self._token = ls
 
-        if result and result.get("error"):
-            raise RuntimeError(result["error"][:300])
-        pieces = []
-        for raw in self._chunks:
-            if raw in ("[[DONE]]",) or raw.startswith("[[RAW]]"):
-                continue
-            p = self.parse_chunk(raw)
-            if p:
-                pieces.append(p)
-        text = "".join(pieces).strip()
-        if not text:
-            raise RuntimeError("empty reply")
-        return text
+            # Extract bx-umidtoken from page
+            self._umid = page.evaluate("""() => {
+                // It's in cookies
+                const m = document.cookie.match(
+                    /bx-umidtoken=([^;]+)/);
+                return m ? m[1] : '';
+            }""")
+
+            if not self._token:
+                # Try cookie extraction
+                cookies = page.evaluate("() => document.cookie")
+                m = re.search(r'token=([^;]+)', cookies)
+                if m:
+                    self._token = m.group(1)
+
+            if self._token:
+                self._save_token()
+                print("[+] qwen: token saved", flush=True)
+            else:
+                raise RuntimeError("qwen: token nahi mila")
+
+    def chat(self, messages, timeout_s=120, stream_cb=None,
+             model="qwen"):
+        from curl_cffi import requests as cr
+        with self.lock:
+            self._ensure_login()
+            prompt = render_prompt(messages)
+            real_model = self.MODEL_ALIASES.get(model, "qwen3.7-plus")
+
+            headers = {
+                **self.HEADERS,
+                "Cookie": "token=" + self._token,
+                "bx-umidtoken": self._umid,
+            }
+
+            # 1. Create new chat
+            r1 = cr.post(
+                self.api + "/chats/new",
+                headers=headers,
+                json={"chatId": "", "models": [real_model],
+                      "project_id": "", "timestamp": int(time.time()),
+                      "chat_type": "t2t", "chat_mode": "normal"},
+                impersonate="chrome131", timeout=15)
+            if r1.status_code != 200:
+                raise RuntimeError("chats/new: HTTP " +
+                                   str(r1.status_code))
+            cd = r1.json()
+            chat_id = cd.get("data", {}).get("id", "")
+            if not chat_id:
+                raise RuntimeError("chats/new: no id — " +
+                                   r1.text[:200])
+
+            # 2. Send message (SSE)
+            headers2 = {
+                **headers,
+                "x-accel-buffering": "no",
+                "Accept": "application/json",
+            }
+            body = {
+                "stream": True,
+                "version": "2.1",
+                "incremental_output": True,
+                "chatId": chat_id,
+                "parentId": "",
+                "chat_id": chat_id,
+                "chat_mode": "normal",
+                "model": real_model,
+                "parent_id": None,
+                "messages": [{
+                    "id": None,
+                    "fid": str(uuid.uuid4()),
+                    "parentId": None,
+                    "childrenIds": [str(uuid.uuid4())],
+                    "role": "user",
+                    "content": prompt,
+                    "user_action": "chat",
+                    "files": [],
+                    "timestamp": int(time.time()),
+                    "models": [real_model],
+                    "model": "",
+                    "chat_type": "t2t",
+                    "feature_config": {
+                        "thinking_enabled": True,
+                        "output_schema": "phase",
+                        "research_mode": "normal",
+                        "auto_thinking": True,
+                        "thinking_mode": "Auto",
+                        "thinking_format": "summary",
+                        "auto_search": True,
+                    },
+                    "extra": {"meta": {"subChatType": "t2t"}},
+                    "sub_chat_type": "t2t",
+                    "parent_id": None,
+                }],
+                "timestamp": int(time.time()),
+            }
+            r2 = cr.post(
+                self.api + "/chat/completions?chat_id=" + chat_id,
+                headers=headers2, json=body,
+                impersonate="chrome131",
+                timeout=(15, timeout_s), stream=True)
+            if r2.status_code != 200:
+                raise RuntimeError("completions: HTTP " +
+                                   str(r2.status_code) +
+                                   " " + r2.text[:200])
+
+            # 3. Parse SSE
+            pieces = []
+            for line in r2.iter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                line = line.strip()
+                if not line or not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                piece = self.parse_chunk(data)
+                if piece:
+                    pieces.append(piece)
+                    if stream_cb:
+                        try:
+                            stream_cb(piece)
+                        except Exception:
+                            pass
+            text = "".join(pieces).strip()
+            if not text:
+                raise RuntimeError("qwen: empty reply")
+            return text
 
     @staticmethod
     def parse_chunk(raw):
-        if raw == "[DONE]":
+        if raw in ("[DONE]", "null", ""):
             return None
         try:
             d = json.loads(raw)
         except Exception:
             return None
         if "phase" in d:
-            if d.get("phase") in ("answer", "continue", None) and d.get("content"):
+            if d.get("phase") in ("answer", "continue", None) \
+                    and d.get("content"):
                 return d["content"]
             return None
         choices = d.get("choices") or []
@@ -385,7 +479,8 @@ class QwenConnector(BaseConnector):
                     or (ch.get("message", {}) or {}).get("content"))
         return (d.get("output", {}) or {}).get("text")
 
-    parse_response = lambda self, raw: parse_sse_full(raw, QwenConnector.parse_chunk)
+    parse_response = lambda self, raw: parse_sse_full(
+        raw, QwenConnector.parse_chunk)
 
 
 def parse_sse_full(raw, chunk_parser):
