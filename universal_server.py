@@ -23,6 +23,7 @@ import json
 import os
 import queue
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -398,6 +399,24 @@ def do_status():
                           f'"content":"hi"}}]}}\'')
 
 
+def _ensure_tls_certs():
+    """Self-signed cert auto-gen (openssl). connectors/ me save.
+    Return: uvicorn ssl kwargs (certfile/keyfile)."""
+    cert = os.path.join(CONNECTORS_DIR, "rev-cert.pem")
+    key = os.path.join(CONNECTORS_DIR, "rev-key.pem")
+    if not (os.path.exists(cert) and os.path.exists(key)):
+        subprocess.run(
+            ["openssl", "req", "-x509", "-newkey", "rsa:2048",
+             "-keyout", key, "-out", cert, "-days", "365", "-nodes",
+             "-subj", "/CN=rev-bridge",
+             "-addext", "subjectAltName=DNS:localhost,DNS:rev-bridge"],
+            check=True, capture_output=True)
+        os.chmod(key, 0o600)
+        print("[+] tls: self-signed cert generated "
+              "(connectors/rev-cert.pem)")
+    return {"ssl_certfile": cert, "ssl_keyfile": key}
+
+
 def main():
     global DEFAULT_KEY
     ap = argparse.ArgumentParser()
@@ -406,6 +425,8 @@ def main():
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--api-key", default=DEFAULT_KEY)
+    ap.add_argument("--tls", action="store_true",
+                    help="HTTPS serve karo (self-signed cert auto-gen)")
     args = ap.parse_args()
 
     DEFAULT_KEY = args.api_key
@@ -416,15 +437,22 @@ def main():
         do_status()
     elif args.serve:
         ips = lan_ips()
+        scheme = "https" if args.tls else "http"
+        ssl_kwargs = {}
+        if args.tls:
+            ssl_kwargs = _ensure_tls_certs()
         print("=" * 56)
         print(" UNIVERSAL MITM BRIDGE")
-        print(f" local  : http://localhost:{args.port}/v1")
+        print(f" local  : {scheme}://localhost:{args.port}/v1")
         for ip in ips:
-            print(f" LAN/M2M: http://{ip}:{args.port}/v1")
+            print(f" LAN/M2M: {scheme}://{ip}:{args.port}/v1")
+        if args.tls:
+            print(" tls    : self-signed — clients me -k / verify=False")
         print(f" api-key: {DEFAULT_KEY}")
         print(f" models : {list(CONNECTOR_CLASSES.keys())}")
         print("=" * 56)
-        uvicorn.run(app, host="0.0.0.0", port=args.port)
+        uvicorn.run(app, host="0.0.0.0", port=args.port,
+                    **ssl_kwargs)
     else:
         ap.print_help()
 

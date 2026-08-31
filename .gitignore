@@ -44,3 +44,5 @@ lmarena_token.json
 connectors/*_mitm.json
 connectors/notion_ai_capture.json
 connectors/ds_chat_capture.json
+connectors/rev-cert.pem
+connectors/rev-key.pem
