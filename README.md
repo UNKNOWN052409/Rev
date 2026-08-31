@@ -189,22 +189,40 @@ curl http://localhost:3002/v1/scrape \
 | PoW challenges | SHA-256 brute force solver |
 | Rate limiting | Exponential backoff, request queuing |
 
-## 8. File Structure
+## 8. File Structure (v2 — capture-only split)
+
+Rev.git ab **browser capture + reverse-engineering kit** hai:
 
 ```
-Rev/
-├── rev_cli.py           # CLI entry point
-├── rev_auth.py          # OAuth-like token store
-├── rev_firecrawl.py     # Firecrawl client
-├── universal_bridge.py  # Provider connectors (MITM)
-├── universal_server.py  # M2M API server
-├── docker-compose.yml   # Firecrawl self-hosted
-├── connectors/          # Captured flows + profiles
-│   ├── ds_chat_capture.json
-│   ├── notion_ai_flow.json
-│   └── profile_*/
-└── README.md            # This document
+Rev/                          # MITM capture + RE tooling
+├── capture_flow.py           # kisi bhi app ka AI flow capture
+├── qwen_auto.py              # mitmproxy-driven auto-login capture
+├── qwen_pipeline.py          # proxy -> login -> token pipeline
+├── qwen_token_harvest.py     # browser se token harvest
+├── login_auto.py             # login automation
+├── mobile_re.py              # mitmdump addon (phone capture)
+├── ssl_unpin.js              # frida cert-unpin
+├── notion_pure.py            # Notion pure-HTTP RE probe
+├── lmarena_flow.py           # LMArena flow RE
+├── api_forensics_v2.py       # tokenizer forensics
+├── auto_pipeline.py          # capture -> flow template auto-analysis
+├── make_test_capture.py      # synthetic capture generator
+├── start.sh                  # --login / --mitm / --capture
+└── connectors/               # profiles + captured flows
 ```
+
+**Serving layer ab proxy.git me hai:**
+
+```
+proxy.git
+├── engine/        # revd — Rust OpenAI-compatible server (live-proven)
+└── rev-serving/   # Python serving (universal_server, adapters,
+                   #  rev_cli, firecrawl, docker-compose)
+```
+
+**Handoff:** Rev.git capture karke token/flow files banata hai
+(qwen_token.json, notion_token_v2.txt, connectors/*_flow.json) —
+wo proxy.git/rev-serving/ me copy hote hain, wahan se API serve hoti hai.
 
 ## 9. References
 

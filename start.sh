@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # ============================================================
-# Qwen -> OpenAI-Compatible API : Master Control (REAL)
+# Rev Kit — Browser Capture + Reverse-Engineering (MITM tooling)
 # ============================================================
-#   ./start.sh --login      # EK BAAR login (browser bridge primary)
-#   ./start.sh --serve      # browser-bridge server (recommended)
-#   ./start.sh --serve-http # HTTP replay server (token wala path)
+#   ./start.sh --login      # EK BAAR login (persistent profile)
 #   ./start.sh --mitm       # phone/Burp-style capture mode
-#   ./start.sh --local      # backup: local GGUF model (offline)
-#   ./start.sh --test       # mock self-test
+#   ./start.sh --capture    # flow capture (notion/figma/...)
 #   ./start.sh --status     # sab check karo
-# ============================================================
+# Serving/API ab proxy.git me hai:
+#   - Python: ../proxy/rev-serving  (universal_server.py)
+#   - Rust  : ../proxy/engine       (revd)
 set -u
 cd "$(dirname "$0")"
 PY="./venv/bin/python"
@@ -32,13 +31,6 @@ check_venv() {
 
 case "${1:---help}" in
 
-  # ---------------- UNIVERSAL (Qwen + Notion + Figma) ----------------
-  --universal)
-    banner "UNIVERSAL SERVER (qwen + notion + figma as OpenAI API)"
-    check_venv
-    $PY universal_server.py --serve --port 8000 --api-key m2m-key
-    ;;
-
   --capture)
     banner "FLOW CAPTURE (Notion/Figma AI endpoint MITM capture)"
     check_venv
@@ -59,31 +51,13 @@ case "${1:---help}" in
     ;;
 
   --serve)
-    banner "METHOD A: Browser Bridge Server (WAF-proof)"
-    check_venv
-    $PY qwen_browser_bridge.py --serve --port 8001
+    echo "[!] Serving ab proxy.git/rev-serving me hai:"
+    echo "    cd ../proxy/rev-serving && python3 universal_server.py --serve"
+    echo "    (ya Rust engine: ../proxy/engine ./target/release/revd)"
     ;;
 
   --serve-headed)
-    banner "METHOD A: Bridge Server (visible browser mode)"
-    check_venv
-    $PY qwen_browser_bridge.py --serve --headed --port 8001
-    ;;
-
-  # ---------------- METHOD B: HTTP replay ----------------
-  --serve-http)
-    banner "METHOD B: HTTP Replay Server (token-based)"
-    check_venv
-    if ! grep -q "APNA_QWEN_TOKEN_YAHAN" config.json 2>/dev/null; then
-      $PY app_to_api_server.py
-    else
-      echo "[!] config.json me token nahi hai."
-      echo "    Token do tarike se milta hai:"
-      echo "    1. --login ke baad browser_profile se (advanced)"
-      echo "    2. Burp/mitm capture se Bearer copy karke config.json me daalo"
-      echo "    3. Ya seedha Method A use karo (--serve) — token ki zaroorat hi nahi"
-      exit 1
-    fi
+    echo "[!] Serving ab proxy.git/rev-serving me hai — Rev.git capture-only hai"
     ;;
 
   # ---------------- METHOD B2: manual MITM capture ----------------
@@ -101,18 +75,10 @@ case "${1:---help}" in
     $PY auto_pipeline.py && echo "[+] Ab './start.sh --serve-http'"
     ;;
 
-  # ---------------- METHOD C: local GGUF ----------------
-  --local)
-    banner "METHOD C: Local GGUF Backup (offline)"
-    chmod +x serve_qwen_api.sh 2>/dev/null
-    ./serve_qwen_api.sh
-    ;;
-
   # ---------------- SELF TEST ----------------
   --test)
-    banner "SELF-TEST (mock chain, 8 checks)"
-    check_venv
-    $PY run_full_test.py
+    echo "[!] Mock self-test ab proxy.git/rev-serving me hai:"
+    echo "    python3 run_full_test.py"
     ;;
 
   # ---------------- STATUS ----------------
