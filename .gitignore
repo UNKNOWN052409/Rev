@@ -29,3 +29,11 @@ connectors/notion_localstorage.json
 connectors/profile_notion/
 lmarena_*.png
 notion_*.png
+
+# token files (fixed connectors inko padhte hain)
+qwen_token.json
+chatgpt_session.json
+deepseek_token.txt
+deepseek_api_key.txt
+connectors/ds_chat_capture.json
+_live_qwen_test.py

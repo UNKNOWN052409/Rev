@@ -2,6 +2,9 @@ mitmproxy>=10.0.0
 requests>=2.31.0
 frida-tools>=12.0.0
 
+# Pure-HTTP connectors (curl_cffi TLS impersonation):
+curl_cffi>=0.13.0
+
 # Workflow 5 — App -> OpenAI adapter server:
 fastapi>=0.110.0
 uvicorn>=0.29.0

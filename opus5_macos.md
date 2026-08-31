@@ -1,0 +1,1 @@
+{"pages":[{"properties":{"title":"HavenOS — macOS-inspired Browser OS"},"icon":"🖥️","content":"<embed src=\"data:text/html;charset=utf-8,%3C!DOCTYPE%20html%3E%3Chtml%3E%3Chead%3E%3Ctitle%3EHavenOS%3C/title%3E%3C/head%3E%3Cbody%3ELoading...%3C/body%3E%3C/html%3E\">HavenOS</embed>"}]}

@@ -1,0 +1,42 @@
+[
+ {
+  "name": "smidV2",
+  "value": "202608260754441c4c5c06780482c4ce2102e18b8194a200c4090483c12a5c0",
+  "domain": "chat.deepseek.com",
+  "path": "/",
+  "expires": 1822290884.856148,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "ds_session_id",
+  "value": "f74c271e00e64089ab1289eb8cc7bbd7",
+  "domain": "chat.deepseek.com",
+  "path": "/",
+  "expires": -1,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Strict"
+ },
+ {
+  "name": ".thumbcache_6b2e5483f9d858d7c661c5e276b6a6ae",
+  "value": "WO2KbCX2yYy/5bIsMfWrqz5l5cD2P6rtmL5Mu66UOQz1lHibadHfsD77p2Cg+fIuZwRgScg34wT9YiEg63Q3OA%3D%3D",
+  "domain": "chat.deepseek.com",
+  "path": "/",
+  "expires": 1822292875.093849,
+  "httpOnly": false,
+  "secure": false,
+  "sameSite": "Lax"
+ },
+ {
+  "name": "aws-waf-token",
+  "value": "2bb92035-35bd-4e07-b49a-57532a6b17f6:HgoAgQI7eN0AAAAA:i+7U1hNKC0avZ4O0DLLmR31PVZsATVgAjxTPx7JFXPl1DPqfd90uwBxXeMPUUMIYueqXDKyW0NCsG9C6bNOBTOWCnsR4Cgq2asMlhECSqWayuL/skhs6tly/C1LbUl+Xj57cv6f+HRru1GmQ64xamcaqzUs12qVjIGc+XFI7+ybVwEURvjYceDX+FaemuhkZMYk+DL/B2n+sXt0nBL9/eGZaWRRGLFZXhoKwT4VKp6QHt1vdWVzHcfDOQ1npOiiVva1j7KnzJWlIh9jzDu0z0oFKC75XCdJ01ALvFsc/Xpb3p2KIFtMSLVQ=",
+  "domain": ".chat.deepseek.com",
+  "path": "/",
+  "expires": 1788078483,
+  "httpOnly": false,
+  "secure": true,
+  "sameSite": "Lax"
+ }
+]

@@ -20,9 +20,12 @@ Server:
 """
 
 import argparse
+import base64
+import hashlib
 import json
 import os
 import queue
+import re
 import threading
 import time
 import uuid
@@ -287,21 +290,42 @@ class QwenConnector(BaseConnector):
         self.login_with_browser()
 
     def login_with_browser(self):
-        """Browser se login — token + umid capture + save."""
-        from ghostrise.engine import GhostSession
-        with GhostSession(profile="ds_login_qwen",
-                          humanize=True) as s:
+        """Browser se token harvest — profile use karo.
+        ghostrise optional; nahi to plain playwright persistent context.
+        Qwen guest access allow karta hai — token bina login milta hai."""
+        try:
+            from ghostrise.engine import GhostSession
+        except ImportError:
+            GhostSession = None
+        if GhostSession is None:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                b = p.chromium.launch_persistent_context(
+                    self.profile_dir, headless=True, user_agent=UA,
+                    args=["--no-sandbox", "--disable-dev-shm-usage"])
+                page = b.pages[0] if b.pages else b.new_page()
+                page.goto("https://chat.qwen.ai",
+                          wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(6000)
+                self._token = page.evaluate(
+                    "() => localStorage.getItem('token') || ''") or ""
+                if not self._token:
+                    cookies = page.evaluate("() => document.cookie")
+                    m = re.search(r'token=([^;]+)', cookies or "")
+                    if m:
+                        self._token = m.group(1)
+                self._umid = page.evaluate("""() => {
+                    const m = document.cookie.match(/bx-umidtoken=([^;]+)/);
+                    return m ? m[1] : '';
+                }""")
+                b.close()
+            if self._token:
+                self._save_token()
+                print("[+] qwen: token saved", flush=True)
+                return
+            raise RuntimeError("qwen: token nahi mila")
+        with GhostSession(profile="ds_login_qwen", humanize=True) as s:
             page = s.browser.new_page()
-            # Capture token from cookies
-            token_captured = []
-
-            def on_resp(resp):
-                if "token=" in (resp.headers.get("set-cookie", "")):
-                    token_captured.append(
-                        resp.headers.get("set-cookie", ""))
-
-            page.on("response", on_resp)
-
             page.goto("https://chat.qwen.ai",
                       wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(20000)
@@ -348,28 +372,47 @@ class QwenConnector(BaseConnector):
             else:
                 raise RuntimeError("qwen: token nahi mila")
 
+    def _http_session(self):
+        """curl_cffi session — WAF warmup (landing GET) ke saath.
+        Live-proven recipe (26 Aug): Session + landing GET ->
+        acw_tc cookies -> token cookie -> chats/new 200."""
+        from curl_cffi import requests as cr
+        s = cr.Session(impersonate="chrome131")
+        s.cookies.set("token", self._token, domain=".qwen.ai")
+        try:
+            s.get("https://chat.qwen.ai/", headers={
+                "user-agent": self.HEADERS["user-agent"],
+                "accept": ("text/html,application/xhtml+xml,"
+                           "application/xml;q=0.9,*/*;q=0.8"),
+                "accept-language": "en-US,en;q=0.9"}, timeout=20)
+        except Exception:
+            pass
+        return s
+
     def chat(self, messages, timeout_s=120, stream_cb=None,
              model="qwen"):
-        from curl_cffi import requests as cr
         with self.lock:
             self._ensure_login()
             prompt = render_prompt(messages)
             real_model = self.MODEL_ALIASES.get(model, "qwen3.7-plus")
 
+            s = self._http_session()
             headers = {
                 **self.HEADERS,
-                "Cookie": "token=" + self._token,
+                "referer": "https://chat.qwen.ai/c/new-chat",
+                "origin": "https://chat.qwen.ai",
+                "X-Request-Id": str(uuid.uuid4()),
                 "bx-umidtoken": self._umid,
             }
 
             # 1. Create new chat
-            r1 = cr.post(
+            r1 = s.post(
                 self.api + "/chats/new",
                 headers=headers,
                 json={"chatId": "", "models": [real_model],
                       "project_id": "", "timestamp": int(time.time()),
                       "chat_type": "t2t", "chat_mode": "normal"},
-                impersonate="chrome131", timeout=15)
+                timeout=15)
             if r1.status_code != 200:
                 raise RuntimeError("chats/new: HTTP " +
                                    str(r1.status_code))
@@ -380,11 +423,6 @@ class QwenConnector(BaseConnector):
                                    r1.text[:200])
 
             # 2. Send message (SSE)
-            headers2 = {
-                **headers,
-                "x-accel-buffering": "no",
-                "Accept": "application/json",
-            }
             body = {
                 "stream": True,
                 "version": "2.1",
@@ -423,10 +461,15 @@ class QwenConnector(BaseConnector):
                 }],
                 "timestamp": int(time.time()),
             }
-            r2 = cr.post(
+            headers2 = {
+                **headers,
+                "x-accel-buffering": "no",
+                "Accept": "application/json",
+                "X-Request-Id": str(uuid.uuid4()),
+            }
+            r2 = s.post(
                 self.api + "/chat/completions?chat_id=" + chat_id,
                 headers=headers2, json=body,
-                impersonate="chrome131",
                 timeout=(15, timeout_s), stream=True)
             if r2.status_code != 200:
                 raise RuntimeError("completions: HTTP " +
@@ -844,46 +887,79 @@ class DeepSeekChatConnector(BaseConnector):
         self.login_with_browser()
 
     def login_with_browser(self):
-        """Browser se login — token capture + save."""
-        from ghostrise.engine import GhostSession
+        """Browser page-context fetch se login — WAF-cooked session me
+        request jaati hai (Cloudflare-style 202 challenge bypass).
+        Credentials env se: DS_EMAIL / DS_PASSWORD.
+        Token capture + save. ghostrise optional hai."""
+        email = os.environ.get("DS_EMAIL", "")
+        password = os.environ.get("DS_PASSWORD", "")
+        if not (email and password):
+            raise RuntimeError(
+                "deepseek: DS_EMAIL/DS_PASSWORD env set karo, "
+                "phir 'rev login deepseek' chalao")
+        try:
+            from ghostrise.engine import GhostSession
+        except ImportError:
+            GhostSession = None
+        if GhostSession is None:
+            from playwright.sync_api import sync_playwright
+            ctx = p_chromium = None
+            with sync_playwright() as p:
+                b = p.chromium.launch_persistent_context(
+                    self.profile_dir, headless=True, user_agent=UA,
+                    args=["--no-sandbox", "--disable-dev-shm-usage"])
+                page = b.pages[0] if b.pages else b.new_page()
+                page.goto(self.login_url,
+                          wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(8000)
+                self._page_login_fetch(page, email, password)
+                b.close()
+            return
         with GhostSession(profile="ds_login", humanize=True) as s:
             page = s.browser.new_page()
             page.goto(self.login_url, wait_until="domcontentloaded",
                       timeout=60000)
-            page.wait_for_timeout(18000)
-            lr = page.evaluate("""async () => {
-                const r = await fetch('%s/users/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        email: 'unknown@havenhaus.in',
-                        password: 'Bankai@2580',
-                        locale: 'en_US',
-                        device_id: '%s',
-                        os: 'Windows'
-                    })
-                });
-                return await r.text();
-            }""" % (self.api, str(uuid.uuid4())))
-            ld = json.loads(lr)
-            self._token = (ld.get("data", {}).get("biz_data", {})
-                           .get("user", {}).get("token", ""))
-            self._uid = (ld.get("data", {}).get("biz_data", {})
-                         .get("user", {}).get("id", ""))
-            if not self._token:
-                raise RuntimeError("deepseek: login fail — " + lr[:200])
-            self._save_token()
+            page.wait_for_timeout(8000)
+            self._page_login_fetch(page, email, password)
 
-    def _solve_pow(self, target_path="/api/v0/chat/completion"):
-        """PoW challenge solve — DeepSeekHashV1 (SHA-256 brute force)."""
-        import base64
-        from curl_cffi import requests as cr
-        r = cr.post(
+    def _page_login_fetch(self, page, email, password):
+        """Page ke andar fetch() se login API call — WAF cookies ke
+        saath request jaati hai."""
+        lr = page.evaluate("""async (args) => {
+            const [api, email, password, deviceId] = args;
+            const r = await fetch(api + '/users/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email: email, password: password,
+                    locale: 'en_US', device_id: deviceId,
+                    os: 'Windows'})
+            });
+            const t = await r.text();
+            return {status: r.status, text: t.slice(0, 600)};
+        }""", [self.api, email, password, str(uuid.uuid4())])
+        if lr.get("status") != 200:
+            raise RuntimeError("deepseek: login HTTP " +
+                               str(lr.get("status")) + " — WAF/login fail")
+        ld = json.loads(lr["text"])
+        user = (ld.get("data", {}).get("biz_data", {})
+                .get("user", {}))
+        self._token = user.get("token", "")
+        self._uid = user.get("id", "")
+        if not self._token:
+            raise RuntimeError("deepseek: login fail — " +
+                               lr["text"][:200])
+        self._save_token()
+
+    def _solve_pow(self, s, target_path="/api/v0/chat/completion"):
+        """PoW challenge solve — DeepSeekHashV1 (SHA-256 brute force).
+        s: warm curl_cffi session."""
+        r = s.post(
             self.api + "/chat/create_pow_challenge",
             headers={**self.HEADERS,
                      "Authorization": "Bearer " + self._token},
             json={"target_path": target_path},
-            impersonate="chrome131", timeout=15)
+            timeout=15)
         if r.status_code != 200:
             raise RuntimeError("pow: HTTP " + str(r.status_code))
         bd = r.json().get("data", {}).get("biz_data", {}).get(
@@ -892,11 +968,22 @@ class DeepSeekChatConnector(BaseConnector):
         salt = bd.get("salt", "")
         signature = bd.get("signature", "")
         algo = bd.get("algorithm", "DeepSeekHashV1")
-        # Brute force nonce
-        for nonce in range(10_000_000):
+        # Difficulty: challenge string ke end me "bits" hota hai
+        # (DeepSeek format: <random>_<target_bits>) — leading zeros
+        # count = bits // 4. Fallback: 1 hex zero.
+        bits = 0
+        if "_" in challenge:
+            try:
+                bits = int(challenge.rsplit("_", 1)[1])
+            except ValueError:
+                bits = 0
+        zeros = max(1, bits // 4)
+        prefix = "0" * zeros
+        # Brute force nonce (main thread me ~1-2s typical)
+        for nonce in range(100_000_000):
             h = hashlib.sha256(
                 (salt + challenge + str(nonce)).encode()).hexdigest()
-            if h.startswith("0"):
+            if h.startswith(prefix):
                 solution = {
                     "algorithm": algo,
                     "challenge": challenge,
@@ -907,23 +994,40 @@ class DeepSeekChatConnector(BaseConnector):
                 }
                 return base64.b64encode(
                     json.dumps(solution).encode()).decode()
-        raise RuntimeError("pow: solve failed")
+        raise RuntimeError("pow: solve failed (zeros=" +
+                           str(zeros) + ")")
+
+    def _http_session(self):
+        """curl_cffi session — landing warmup ke saath (WAF cookies)."""
+        from curl_cffi import requests as cr
+        s = cr.Session(impersonate="chrome131")
+        s.cookies.set("userToken", self._token, domain=".deepseek.com")
+        try:
+            s.get("https://chat.deepseek.com/", headers={
+                "user-agent": self.HEADERS.get(
+                    "user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/131.0.0.0 Safari/537.36")},
+                timeout=20)
+        except Exception:
+            pass
+        return s
 
     def chat(self, messages, timeout_s=120, stream_cb=None,
              model="deepseek"):
-        from curl_cffi import requests as cr
         with self.lock:
             self._ensure_login()
             prompt = render_prompt(messages)
             model_type = self.MODEL_ALIASES.get(model, "default")
 
+            s = self._http_session()
             # 1. Create session
-            r1 = cr.post(
+            r1 = s.post(
                 self.api + "/chat_session/create",
                 headers={**self.HEADERS,
                          "Authorization": "Bearer " + self._token},
                 json={},
-                impersonate="chrome131", timeout=15)
+                timeout=15)
             if r1.status_code != 200:
                 raise RuntimeError("session: HTTP " +
                                    str(r1.status_code))
@@ -934,7 +1038,7 @@ class DeepSeekChatConnector(BaseConnector):
                                    r1.text[:200])
 
             # 2. PoW solve
-            pow_header = self._solve_pow()
+            pow_header = self._solve_pow(s)
 
             # 3. Chat completion (SSE)
             body = {
@@ -955,10 +1059,9 @@ class DeepSeekChatConnector(BaseConnector):
                 "Referer": ("https://chat.deepseek.com/"
                             "a/chat/s/" + sid),
             }
-            r2 = cr.post(
+            r2 = s.post(
                 self.api + "/chat/completion",
                 headers=headers, json=body,
-                impersonate="chrome131",
                 timeout=(15, timeout_s), stream=True)
             if r2.status_code != 200:
                 raise RuntimeError("completion: HTTP " +
@@ -1018,9 +1121,301 @@ class DeepSeekChatConnector(BaseConnector):
         raw, DeepSeekChatConnector.parse_chunk)
 
 
+
+
+# ================================================================
+# CHATGPT connector (chatgpt.com) — TRUE MITM, pure HTTP replay
+# ================================================================
+
+class ChatGPTConnector(BaseConnector):
+    """ChatGPT Web — MITM via captured session token.
+    Runtime: pure HTTP (curl_cffi). Browser sirf token harvest ke liye.
+    Flow: GET /backend-api/models -> POST /backend-api/conversation -> SSE.
+    Auth: __Secure-next-auth.session-token cookie.
+    Token file: chatgpt_session.json {token: ...}"""
+    name = "chatgpt"
+    login_url = "https://chatgpt.com/auth/login"
+    profile_dir = os.path.join(CONNECTORS_DIR, "profile_chatgpt")
+    api = "https://chatgpt.com/backend-api"
+
+    MODEL_ALIASES = {
+        "chatgpt": "gpt-5.2",
+        "chatgpt-auto": "auto",
+        "gpt-4.1": "gpt-4.1",
+        "gpt-4o": "gpt-4o",
+        "gpt-5": "gpt-5.2",
+        "gpt-5.2": "gpt-5.2",
+        "gpt-5-mini": "gpt-5-mini",
+        "gpt-5-nano": "gpt-5-nano",
+        "gpt-5.5": "gpt-5.5",
+        "gpt-5.5-chat-latest": "gpt-5.5-chat-latest",
+    }
+
+    HEADERS = {
+        "Accept": "text/event-stream",
+        "Origin": "https://chatgpt.com",
+        "Referer": "https://chatgpt.com/",
+        "user-agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/131.0.0.0 Safari/537.36"),
+        "accept-language": "en-US,en;q=0.9",
+        "OAI-Device-Id": "",
+        "OAI-Client-Version": "prod-2812efc862",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self._session_token = ""
+        self._access_token = ""
+        self._device_id = ""
+
+    def start(self):
+        self._load_token()
+
+    def _token_path(self):
+        return os.path.join(os.path.dirname(CONNECTORS_DIR),
+                            "chatgpt_session.json")
+
+    def _load_token(self):
+        p = self._token_path()
+        if os.path.exists(p):
+            with open(p) as f:
+                d = json.load(f)
+            self._session_token = d.get("session_token", "")
+            self._access_token = d.get("access_token", "")
+            self._device_id = d.get("device_id", "") or str(uuid.uuid4())
+
+    def _save_token(self):
+        with open(self._token_path(), "w") as f:
+            json.dump({"session_token": self._session_token,
+                       "access_token": self._access_token,
+                       "device_id": self._device_id}, f)
+
+    def is_logged_in(self):
+        return bool(self._session_token)
+
+    def _ensure_login(self):
+        if self._session_token:
+            return
+        self.login_with_browser()
+
+    def login_with_browser(self):
+        """Browser se session token harvest — login/profile use karo.
+        Visible browser me khud login karo, tool cookie pakad leta hai."""
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            b = p.chromium.launch_persistent_context(
+                self.profile_dir, headless=True, user_agent=UA,
+                args=["--no-sandbox", "--disable-dev-shm-usage"])
+            page = b.pages[0] if b.pages else b.new_page()
+            page.goto("https://chatgpt.com", wait_until="domcontentloaded",
+                      timeout=60000)
+            page.wait_for_timeout(6000)
+            tok = None
+            for c in b.cookies("https://chatgpt.com"):
+                if c["name"] == "__Secure-next-auth.session-token":
+                    tok = c["value"]
+                    break
+            if tok:
+                self._session_token = tok
+                self._save_token()
+                print("[+] chatgpt: session token saved", flush=True)
+            else:
+                raise RuntimeError(
+                    "chatgpt: session-token cookie nahi mila — "
+                    "pehle visible browser me login karo: "
+                    "universal_server.py --login chatgpt")
+            b.close()
+
+    def _http_session(self):
+        from curl_cffi import requests as cr
+        s = cr.Session(impersonate="chrome131")
+        s.cookies.set("__Secure-next-auth.session-token",
+                      self._session_token, domain="chatgpt.com")
+        try:
+            s.get("https://chatgpt.com/", headers={
+                "user-agent": self.HEADERS["user-agent"],
+                "accept": "text/html,*/*",
+                "accept-language": "en-US,en;q=0.9"}, timeout=20)
+        except Exception:
+            pass
+        return s
+
+    def _ensure_access_token(self, s):
+        """session-token -> Bearer access_token (auth/api/v1/session)."""
+        if self._access_token:
+            return
+        r = s.get("https://chatgpt.com/api/auth/session",
+                  headers={"user-agent": self.HEADERS["user-agent"]},
+                  timeout=15)
+        if r.status_code != 200:
+            raise RuntimeError("chatgpt: session fetch HTTP " +
+                               str(r.status_code) + " " + r.text[:150])
+        at = r.json().get("accessToken", "")
+        if not at:
+            raise RuntimeError(
+                "chatgpt: accessToken nahi mila — session token expire")
+        self._access_token = at
+        self._save_token()
+
+    def _chat_requirements(self, s):
+        """POST /backend-api/.../chat-requirements -> openai-sentinel
+        headers (proof-of-work token)."""
+        r = s.post(
+            self.api + "/sentinel/chat-requirements",
+            headers={**self.HEADERS,
+                     "Authorization": "Bearer " + self._access_token,
+                     "Content-Type": "application/json",
+                     "OAI-Device-Id": self._device_id},
+            json={"p": self._device_id},
+            timeout=15)
+        if r.status_code != 200:
+            raise RuntimeError("chatgpt: chat-requirements HTTP " +
+                               str(r.status_code) + " " + r.text[:150])
+        return r.json()
+
+    def chat(self, messages, timeout_s=120, stream_cb=None,
+             model="chatgpt"):
+        with self.lock:
+            self._ensure_login()
+            prompt = render_prompt(messages)
+            real_model = self.MODEL_ALIASES.get(model, "gpt-5.2")
+
+            s = self._http_session()
+            self._ensure_access_token(s)
+            req = self._chat_requirements(s)
+            pow_token = req.get("token", "")  # openai-sentinel-proof
+            arkose = req.get("arkose", {}) or {}
+            arkose_token = arkose.get("value", "")
+
+            headers = {
+                **self.HEADERS,
+                "Authorization": "Bearer " + self._access_token,
+                "Content-Type": "application/json",
+                "OAI-Device-Id": self._device_id,
+                "openai-sentinel-proof-token": pow_token,
+            }
+            if arkose_token:
+                headers["openai-sentinel-arkose-token"] = arkose_token
+
+            # conversation body — ChatGPT web shape
+            msg_id = str(uuid.uuid4())
+            body = {
+                "action": "next",
+                "messages": [{
+                    "id": msg_id,
+                    "author": {"role": "user"},
+                    "content": {"content_type": "text",
+                                "parts": [prompt]},
+                    "metadata": {},
+                }],
+                "parent_message_id": str(uuid.uuid4()),
+                "model": real_model,
+                "timezone_offset_min": 0,
+                "suggestions": [],
+                "history_and_training_disabled": False,
+                "conversation_mode": {"kind": "primary_assistant"},
+                "force_paragen": False,
+                "force_paragen_model_slug": "",
+                "force_nulligen": False,
+                "force_rate_limit": False,
+                "reset_rate_limits": False,
+                "websocket_request_id": str(uuid.uuid4()),
+                "system_hints": [],
+                "supported_encodings": ["v1"],
+                "client_contextual_info": {
+                    "is_dark_mode": False,
+                    "time_since_loaded": 47,
+                    "page_height": 690,
+                    "page_width": 1275,
+                    "screen_height": 818,
+                    "screen_width": 1296,
+                    "scroll_x": 0, "scroll_y": 0,
+                },
+                "paragen_streamed_response_cot_only": False,
+                "paragen_cot_summary_display_override": "allow",
+                "supports_buffering": True,
+            }
+            r = s.post(self.api + "/conversation", headers=headers,
+                       json=body, timeout=(15, timeout_s), stream=True)
+            if r.status_code in (401, 403):
+                # access token stale — ek baar refresh retry
+                self._access_token = ""
+                self._ensure_access_token(s)
+                headers["Authorization"] = (
+                    "Bearer " + self._access_token)
+                r = s.post(self.api + "/conversation",
+                           headers=headers, json=body,
+                           timeout=(15, timeout_s), stream=True)
+            if r.status_code == 428 or "arkose" in r.text[:300].lower():
+                raise RuntimeError(
+                    "chatgpt: arkose/proof-of-work challenge — "
+                    "device token stale, dobara login karo")
+            if r.status_code != 200:
+                raise RuntimeError("chatgpt: conversation HTTP " +
+                                   str(r.status_code) + " " +
+                                   r.text[:200])
+            pieces = []
+            for line in r.iter_lines():
+                if isinstance(line, bytes):
+                    line = line.decode("utf-8", "ignore")
+                line = line.strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                piece = self.parse_chunk(data)
+                if piece:
+                    pieces.append(piece)
+                    if stream_cb:
+                        try:
+                            stream_cb(piece)
+                        except Exception:
+                            pass
+            text = "".join(pieces).strip()
+            if not text:
+                raise RuntimeError("chatgpt: empty reply")
+            return text
+
+    @staticmethod
+    def parse_chunk(raw):
+        """ChatGPT SSE frames: data: {"v": ..., "o": "append", ...}
+        ya legacy {message: {content: {parts: [...]}}}."""
+        if raw in ("[DONE]", "null", ""):
+            return None
+        try:
+            d = json.loads(raw)
+        except Exception:
+            return None
+        if not isinstance(d, dict):
+            return None
+        # v2 frames (o = op, v = value)
+        v = d.get("v")
+        if isinstance(v, dict):
+            msg = v.get("message") or {}
+            content = (msg.get("content") or {})
+            if isinstance(content, dict):
+                parts = content.get("parts")
+                if isinstance(parts, list) and parts:
+                    return parts[-1]
+            recipient = msg.get("recipient")
+            if recipient == "all" and isinstance(v.get("delta"), str):
+                return v["delta"]
+        # legacy frames
+        msg = d.get("message") or {}
+        content = msg.get("content") or {}
+        if isinstance(content, dict):
+            parts = content.get("parts")
+            if isinstance(parts, list) and parts:
+                return parts[-1]
+        return None
+
+
 CONNECTOR_CLASSES = {
     "qwen": QwenConnector,
     "notion": NotionConnector,
     "deepseek": DeepSeekChatConnector,
+    "chatgpt": ChatGPTConnector,
     "figma": FigmaConnector,
 }

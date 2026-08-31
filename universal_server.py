@@ -23,6 +23,7 @@ import json
 import os
 import queue
 import socket
+import sys
 import threading
 import time
 import uuid
@@ -139,6 +140,11 @@ async def models():
     for mid in ("qwen3.7-plus", "qwen3.8-max"):
         data.append({"id": mid, "object": "model",
                      "owned_by": "qwen", "ready": True})
+    # chatgpt models
+    from universal_bridge import ChatGPTConnector as _CG
+    for alias in _CG.MODEL_ALIASES:
+        data.append({"id": alias, "object": "model",
+                     "owned_by": "chatgpt", "ready": True})
     # deepseek models
     DEEPSEEK_MODELS = {
         "deepseek": "deepseek-chat",
@@ -176,6 +182,8 @@ async def chat_completions(request: Request):
     from universal_bridge import NOTION_MODELS
     if model.startswith("qwen"):
         connector_name = "qwen"
+    elif model.startswith("chatgpt") or model.startswith("gpt-"):
+        connector_name = "chatgpt"
     elif model.startswith("deepseek"):
         connector_name = "deepseek"
     elif (model.startswith("notion") or model in NOTION_MODELS
@@ -295,14 +303,38 @@ def do_login(app_name):
               f"{list(CONNECTOR_CLASSES.keys())}")
         return 1
     if app_name == "deepseek":
+        # Web-chat MITM path: DS_EMAIL/DS_PASSWORD env + browser
+        # page-context login. API-key path bhi accept karo.
         key_path = os.path.join(
             os.path.dirname(CONNECTORS_DIR), "deepseek_api_key.txt")
-        if os.path.exists(key_path):
-            print(f"[+] deepseek: api key hai — {key_path}")
+        if not os.environ.get("DS_EMAIL"):
+            if os.path.exists(key_path):
+                print(f"[+] deepseek: api key hai — {key_path}")
+                return 0
+            print("[!] deepseek: DS_EMAIL/DS_PASSWORD env set karo "
+                  "(web-chat MITM) ya platform.deepseek.com se api key "
+                  "banao")
+            return 1
+        c = cls()
+        c.login_with_browser()
+        print("[+] deepseek: web-chat token saved")
+        return 0
+    if app_name == "chatgpt":
+        # visible browser me khud login karo, phir token harvest
+        if not os.environ.get("DISPLAY") and not os.environ.get(
+                "CHATGPT_HEADLESS_ALLOW"):
+            print("[!] ChatGPT login visible browser me hota hai — "
+                  "desktop pe chalao (ya CHATGPT_HEADLESS_ALLOW=1)")
+            return 1
+        c = cls()
+        try:
+            c.login_with_browser()
+            print("[+] chatgpt: session token saved (agar pehle se "
+                  "logged-in profile tha)")
             return 0
-        print("[!] deepseek: pehle platform.deepseek.com se "
-              "api key banao, phir deepseek_api_key.txt me save karo")
-        return 1
+        except RuntimeError as e:
+            print(f"[!] {e}")
+            return 1
     c = cls()
     if not os.environ.get("DISPLAY"):
         print("[!] Display nahi — apne desktop se chalao ya xvfb use karo")

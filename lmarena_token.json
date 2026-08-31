@@ -1,0 +1,33 @@
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6IjA5YTI3OTYzLTczNmYtNGM0Zi05NGIyLWJmYzRiMWI2MWY4OCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2h1b2d6b2VxemNyZHZrd3R2b2RpLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI1ZTUzY2I2Yy1iNzQ3LTRkNjItOWZhNy1jZDY4YWU1ZWU4YzIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg3NjUwMjE2LCJpYXQiOjE3ODc2NDY2MTYsImVtYWlsIjoiIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnt9LCJ1c2VyX21ldGFkYXRhIjp7ImlkIjoiMDFhMDM4MGEtNjYwNC03YWNiLTkxOGUtN2VjZjJmOWM3MjljIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoiYW5vbnltb3VzIiwidGltZXN0YW1wIjoxNzg3NjQ2NjE2fV0sInNlc3Npb25faWQiOiIzMzBiZDVjNC02NjRkLTRjZTctYjAwZS1iMTVjMTM1YTNjY2EiLCJpc19hbm9ueW1vdXMiOnRydWV9.dSKngpYw4NKdCEEdv4VZ8a0v6XfTZQxrQ1ZnexRq5bs6q8p9swdILNgXj8_-aGikuYPBI8yuSUSPU3O2oHPAKw",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "expires_at": 1787650216,
+  "refresh_token": "afjgnf5kdv5y",
+  "supabaseUser": {
+    "id": "5e53cb6c-b747-4d62-9fa7-cd68ae5ee8c2",
+    "app_metadata": {},
+    "user_metadata": {
+      "id": "01a0380a-6604-7acb-918e-7ecf2f9c729c"
+    },
+    "aud": "authenticated",
+    "email": "",
+    "phone": "",
+    "created_at": "2026-08-25T08:30:16.34484Z",
+    "last_sign_in_at": "2026-08-25T08:30:16.346396327Z",
+    "role": "authenticated",
+    "updated_at": "2026-08-25T08:30:16.350209Z",
+    "identities": [],
+    "is_anonymous": true
+  },
+  "user": {
+    "id": "01a0380a-6604-7acb-918e-7ecf2f9c729c",
+    "supabaseUserId": "5e53cb6c-b747-4d62-9fa7-cd68ae5ee8c2",
+    "touConsentTimestamp": null,
+    "avatarUrl": null,
+    "email": "",
+    "emailProvider": null,
+    "username": null,
+    "marketingSubscribed": false
+  }
+}
