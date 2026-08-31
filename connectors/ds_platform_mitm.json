@@ -1,6 +1,0 @@
-[
- {
-  "url": "https://platform.deepseek.com/auth-api/v0/users/create_email_verification_code",
-  "body": "{\"email\":\"unknown@havenhaus.in\",\"turnstile_token\":\"\",\"locale\":\"en_US\",\"device_id\":\"BKqs4lsB9jDajdKyisFUGclp/uvNJNLlbtSoAO5EUmZw8ejXGl4k7S7zr892EwWR7VIwuQvs44pilTpPM2MD4Vw==\",\"scenario\":\"register\"}"
- }
-]

@@ -1,6 +1,0 @@
-[
- {
-  "url": "https://platform.deepseek.com/auth-api/v0/users/register",
-  "body": "{\"locale\":\"en_US\",\"region\":\"IN\",\"payload\":{\"email\":\"unknown@havenhaus.in\",\"email_verification_code\":\"479321\",\"password\":\"Bankai@2580\"},\"device_id\":\"BMb5f+J2hA5XR3QQkRc24VwGvB4wXUjCPUc90sbrdYOvFq0wQt5g75wewt70pwZIkf4/4V7U2PORAehDZrJuieg==\",\"os\":\"web\"}"
- }
-]

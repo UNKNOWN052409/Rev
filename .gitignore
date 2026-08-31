@@ -37,3 +37,10 @@ deepseek_token.txt
 deepseek_api_key.txt
 connectors/ds_chat_capture.json
 _live_qwen_test.py
+
+# live session material — MITM captures
+connectors/deepseek_cookies.json
+lmarena_token.json
+connectors/*_mitm.json
+connectors/notion_ai_capture.json
+connectors/ds_chat_capture.json
