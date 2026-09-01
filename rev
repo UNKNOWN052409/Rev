@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""Rev CLI entry point."""
+"""Rev CLI entry point — rev_cli.py serving layer me hai
+(proxy.git/rev-serving), Rev.git capture-only hai. Yahan se bridge."""
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from rev_cli import main
+try:
+    from rev_cli import main
+except ModuleNotFoundError:
+    # rev_cli serving layer ke saath proxy.git me shifted — bridge karo
+    SERVING = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "..", "proxy", "rev-serving")
+    if os.path.isdir(SERVING):
+        sys.path.insert(0, os.path.abspath(SERVING))
+    from rev_cli import main
 
 if __name__ == "__main__":
     sys.exit(main())
