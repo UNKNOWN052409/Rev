@@ -139,6 +139,26 @@ rev token qwen
 rev revoke notion
 ```
 
+### 4a. app2mcp — koi bhi app ko MCP + API me convert
+
+Koi bhi app (Android/web/desktop) jiska koi official API/MCP nahi — capture karo, convert karo:
+
+```bash
+# 1. Capture (phone: mitmdump -s mobile_re.py, proxy+cert; Frida unpin agar pinned)
+# 2. Analyze — capture se chat+content endpoints
+python3 app2mcp.py analyze
+# 3. Build
+python3 app2mcp.py build <app>            # single best endpoint
+python3 app2mcp.py build <app> --all       # multi-endpoint: top N endpoints,
+                                           # ek multi-tool MCP + multi-model API
+# 4. Serve
+python3 app2mcp.py serve <app> --port 8000 --mcp-port 9880
+# Android quickstart guide
+python3 app2mcp.py android
+```
+
+Outputs (per build): REST API (OpenAI-compat `/v1/chat/completions` SSE + `/read` + `/invoke` + `/endpoints`), FastMCP SSE server (multi mode me har endpoint ka `<app>_<endpoint>_read` tool), aur proxy.git engine ka `GenericFlowAdapter` config (`apps` array — har endpoint alag model). Token-efficiency (`max_tokens`/`batch`) generated servers me built-in.
+
 ## 5. M2M API (OpenAI-Compatible)
 
 ```bash
