@@ -330,6 +330,96 @@ def filter_eps(eps, intent):
             yield e
 
 
+def do_proxy(port=8080, app_filter=""):
+    """mitmdump proxy mode — phone/app capture (mobile_re.py addon).
+
+    Rev Kit ka asli MITM: phone WiFi proxy is host:port pe point karo,
+    mitm.it se cert install — addon endpoints+tokens+bodies capture
+    karta hai re_capture/ me. Ctrl+C jab capture khatam."""
+    import subprocess, sys as _sys
+    addon = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mobile_re.py")
+    if not os.path.exists(addon):
+        print(f"[!] mobile_re.py missing: {addon}")
+        _sys.exit(1)
+    print("=" * 64)
+    print(" REVKIT PROXY MODE — phone/app MITM")
+    print(f" 1. Phone WiFi proxy -> <is-host-ip>:{port}")
+    print(" 2. Phone browser -> http://mitm.it (CA cert install)")
+    print(" 3. App use karo — saare endpoints/tokens capture honge")
+    print(" 4. Ctrl+C jab ho jaye")
+    print("=" * 64)
+    cmd = ["mitmdump", "-s", addon, "--listen-port", str(port)]
+    if app_filter:
+        os.environ["REVKIT_FILTER"] = app_filter
+    try:
+        subprocess.run(cmd)
+    except FileNotFoundError:
+        print("[!] mitmdump nahi hai — pip install mitmproxy")
+        _sys.exit(1)
+    # capture ke baad auto-report
+    cap_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "re_capture")
+    ep_file = os.path.join(cap_dir, "endpoints.json")
+    if os.path.exists(ep_file):
+        print(f"\n[+] captured endpoints: {ep_file}")
+        print("[+] revkit report-proxy re_capture/endpoints.json  (TODO next)")
+    else:
+        print("[*] re_capture/ me data hai — endpoints.json bana abhi")
+
+
+def do_report_proxy(cap_dir):
+    """proxy capture (re_capture/) -> intent report (browser-map jaisa)."""
+    ep_file = os.path.join(cap_dir, "endpoints.json")
+    sess_file = os.path.join(cap_dir, "session.jsonl")
+    eps = []
+    if os.path.exists(ep_file):
+        try:
+            raw = json.load(open(ep_file))
+            # mobile_re.py dict format: {"GET url": {count, statuses}}
+            if isinstance(raw, dict):
+                for k, v in raw.items():
+                    method, _, url = k.partition(" ")
+                    if url and "://" not in url:
+                        url = "https://" + url
+                    eps.append({"method": method or "GET", "url": url,
+                                "status": (v.get("statuses") or [0])[0]})
+            else:
+                eps = raw
+        except Exception:
+            eps = []
+    if not eps and os.path.exists(sess_file):
+        # jsonl fallback
+        seen = set()
+        with open(sess_file) as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except Exception:
+                    continue
+                key = (r.get("method", "GET"), (r.get("url") or "").split("?")[0])
+                if key in seen:
+                    continue
+                seen.add(key)
+                eps.append(r)
+    if not eps:
+        print("[!] koi capture nahi — revkit proxy chalao pehle")
+        sys.exit(1)
+    print("=" * 64)
+    print(f" REVKIT PROXY REPORT — {cap_dir}")
+    print(f" {len(eps)} unique endpoints")
+    print("=" * 64)
+    scored = []
+    for ep in eps:
+        if is_asset(ep.get("url") or ""):
+            continue
+        intent, s, _ = classify_endpoint(ep)
+        scored.append((s, intent, ep))
+    scored.sort(key=lambda x: -x[0])
+    for s, intent, ep in scored:
+        star = "★" if s >= 8 else " "
+        print(f"{s:>4}{star} [{intent:<12}] {ep.get('method','?'):<6} "
+              f"{(ep.get('url') or '')[:66]}")
+
+
 def main():
     ap = argparse.ArgumentParser(prog="revkit",
                                 description="Rev Kit MITM CLI — URL do, endpoints + user-intent map")
@@ -356,19 +446,26 @@ def main():
     a = sub.add_parser("intent", help="intent deep-dive")
     a.add_argument("file")
 
+    px = sub.add_parser("proxy", help="REAL proxy MITM — phone/app capture (mitmdump)")
+    px.add_argument("--port", type=int, default=8080)
+    px.add_argument("--filter", default="", help="sirf is keyword wale hosts")
+
+    rpx = sub.add_parser("report-proxy", help="proxy capture ka intent report")
+    rpx.add_argument("cap_dir", nargs="?", default="re_capture")
+
     args = ap.parse_args()
     if args.cmd == "map":
         do_map(args.url, args.watch, args.filter, headless=not args.headed)
     elif args.cmd == "report":
         do_report(args.file)
-    elif args.cmd == "do_endpoints":
-        do_endpoints(args.file)
     elif args.cmd == "endpoints":
-        do_endpoints(args.file)
-    elif args.cmd == "endpoints":
-        do_endpoints(args.file, args.intent)
+        do_endpoints(args.file, getattr(args, "intent", ""))
     elif args.cmd == "intent":
         do_report(args.file)
+    elif args.cmd == "proxy":
+        do_proxy(args.port, args.filter)
+    elif args.cmd == "report-proxy":
+        do_report_proxy(args.cap_dir)
 
 
 if __name__ == "__main__":
