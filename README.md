@@ -36,6 +36,27 @@
 
 ### 2.1 Traffic Capture (MITM)
 
+**revkit CLI (naya, Sep 2026)** — Rev Kit ka MITM ab ek command:
+
+```bash
+python3 revkit.py map https://www.netflix.com --watch 30   # auto 30s
+python3 revkit.py map https://app.example.com --headed     # login + manual use
+python3 revkit.py report captures/netflix_com_map.json     # intent report
+python3 revkit.py endpoints captures/netflix_com_map.json  # sirf URLs
+```
+
+URL do → stealth Chromium (persistent profile — login yaad rehta hai)
+→ **saare HTTPS requests capture** (headers, body, response, SSE bhi)
+→ **endpoint inventory** (dedupe, asset/CDN noise filter) → **user-intent
+classification** (login/search/play/graphql/generate-ai/purchase/wall-captcha
+signatures se score) → JSON map + human report. "User ne konsa manga?"
+ka jawab intent summary me — top intents star ke saath.
+
+Live-proof (Netflix, Sep 2026): 50 reqs -> 42 unique endpoints,
+`POST /graphql` 9-star (MembershipStatus persisted-query), reCAPTCHA
+Enterprise anchor wall detect (sitekey extract), assets auto-hidden.
+MITM capture wall bhi bata deta hai — kaunsa endpoint captcha hai.
+
 Rev captures API traffic using browser-level network interception:
 
 | Method | Tool | Use Case |
